@@ -58,6 +58,7 @@ class Batcontrol(object):
         self.last_reserved_energy = -1
         self.last_max_capacity = -1
 
+        self.discharge_blocked = False
         self.discharge_limit = 0
 
         self.fetched_stored_energy = False
@@ -107,7 +108,7 @@ class Batcontrol(object):
         self.mqtt_api = None
         if 'mqtt' in config.keys():
             if config['mqtt']['enabled'] == True:
-                logger.info(f'[Main] MQTT Connection enabled ')
+                logger.info(f'[Main] MQTT Connection enabled')
                 import mqtt_api
                 self.mqtt_api = mqtt_api.MQTT_API(config['mqtt'])
                 self.mqtt_api.wait_ready()
@@ -119,8 +120,17 @@ class Batcontrol(object):
                 self.mqtt_api.register_set_callback('min_price_difference', self.api_set_min_price_difference, float)
                 # Inverter Callbacks
                 self.inverter.activate_mqtt(self.mqtt_api)
-                logger.info(f'[Main] MQTT Connection ready ')
+                logger.info(f'[Main] MQTT Connection ready')
 
+        self.evcc_api = None
+        if 'evcc' in config.keys():
+            if config['evcc']['enabled'] == True:
+                logger.info(f'[Main] EVCC Connection enabled')
+                import evcc_api
+                self.evcc_api = evcc_api.EVCC_API(config['evcc'])
+                self.ebcc_api.register_block_function(self.set_discharge_blocked)
+                self.evcc_api.wait_ready()
+                logger.info(f'[Main] EVCC Connection ready')
 
 
     def __del__(self):
@@ -391,6 +401,11 @@ class Batcontrol(object):
             logger.debug(
                 f'[BatCTRL] Battery with {stored_energy} above discharge limit {discharge_limit}')
             return True
+        
+        if self.discharge_blocked:
+            logger.debug(
+                f'[BatCTRL] Discharge blocked due to external lock')
+            return False
 
         current_price = prices[0]
         min_price_difference = self.min_price_difference
@@ -555,6 +570,14 @@ class Batcontrol(object):
         if self.mqtt_api is not None:
             self.mqtt_api.publish_always_allow_discharge_limit_capacity(discharge_limit)
         return
+    
+    def set_discharge_blocked(self, discharge_blocked):
+        if discharge_blocked == self.discharge_blocked:
+            return
+        if self.mqtt_api is not None:
+            self.mqtt_api.publish_discharge_blocked(discharge_blocked)
+        self.discharge_blocked = discharge_blocked
+        return
 
     def refresh_static_values(self):
         if self.mqtt_api is not None:
@@ -568,6 +591,8 @@ class Batcontrol(object):
             #
             self.mqtt_api.publish_evaluation_intervall(TIME_BETWEEN_EVALUATIONS)
             self.mqtt_api.publish_last_evaluation_time(self.last_run_time)
+            #
+            self.mqtt_api.publish_discharge_blocked(self.discharge_blocked)
             # Trigger Inverter
             self.inverter.refresh_api_values()
 
