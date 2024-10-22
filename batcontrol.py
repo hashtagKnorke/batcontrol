@@ -128,7 +128,7 @@ class Batcontrol(object):
                 logger.info(f'[Main] EVCC Connection enabled')
                 import evcc_api
                 self.evcc_api = evcc_api.EVCC_API(config['evcc'])
-                self.ebcc_api.register_block_function(self.set_discharge_blocked)
+                self.evcc_api.register_block_function(self.set_discharge_blocked)
                 self.evcc_api.wait_ready()
                 logger.info(f'[Main] EVCC Connection ready')
 
@@ -158,12 +158,12 @@ class Batcontrol(object):
             if 'apikey' in config['utility'].keys():
                 pass
             else:
-                raise RuntimeError(f'[BatCtrl] Utility Tibber requires an apikey. Please provide the apikey in your configuration file')
+                raise RuntimeError(f'[BatCTRL] Utility Tibber requires an apikey. Please provide the apikey in your configuration file')
         elif config['utility']['type'] in ['evcc']:
             if 'url' in config['utility'].keys():
                 pass
             else:
-                raise RuntimeError(f'[BatCtrl] Utility EVCC requires an URL. Please provide the URL in your configuration file')
+                raise RuntimeError(f'[BatCTRL] Utility EVCC requires an URL. Please provide the URL in your configuration file')
         else:
             config['utility']['apikey']=None
             
@@ -237,10 +237,10 @@ class Batcontrol(object):
         
         if time_passed < ERROR_IGNORE_TIME :
             #keep current mode
-            logger.info(f"[BatCtrl] An API Error occured {time_passed:.0f}s ago. Keeping inverter mode unchanged.")          
+            logger.info(f"[BatCTRL] An API Error occured {time_passed:.0f}s ago. Keeping inverter mode unchanged.")          
         else:
             #set default mode
-            logger.warning(f"[BatCtrl] An API Error occured {time_passed:.0f}s ago. Setting inverter to default mode (Allow Discharging)")
+            logger.warning(f"[BatCTRL] An API Error occured {time_passed:.0f}s ago. Setting inverter to default mode (Allow Discharging)")
             self.inverter.set_mode_allow_discharge()
     
     def run(self):
@@ -263,7 +263,7 @@ class Batcontrol(object):
             fc_period = min(max(price_dict.keys()), max(production_forecast.keys()))
             consumption_forecast = self.fc_consumption.get_forecast(fc_period+1)
         except Exception as e:
-            logger.warning(f'[BatCtrl] Following Exception occurred when trying to get forecasts: \n\t{e}')
+            logger.warning(f'[BatCTRL] Following Exception occurred when trying to get forecasts: \n\t{e}')
             self.handle_forecast_error()
             return
             
@@ -397,9 +397,10 @@ class Batcontrol(object):
         # always allow discharging when battery is >90% maxsoc
         discharge_limit = self.get_max_capacity() * self.always_allow_discharge_limit
         stored_energy = self.get_stored_energy()
+     
         if stored_energy > discharge_limit:
             logger.debug(
-                f'[BatCTRL] Battery with {stored_energy} above discharge limit {discharge_limit}')
+                f'[BatCTRL] Battery with ({stored_energy}) above discharge limit {discharge_limit}')
             return True
         
         if self.discharge_blocked:
@@ -574,6 +575,7 @@ class Batcontrol(object):
     def set_discharge_blocked(self, discharge_blocked):
         if discharge_blocked == self.discharge_blocked:
             return
+        logger.info(f'[BatCTRL] Discharge block: {discharge_blocked}')
         if self.mqtt_api is not None:
             self.mqtt_api.publish_discharge_blocked(discharge_blocked)
         self.discharge_blocked = discharge_blocked
@@ -599,10 +601,10 @@ class Batcontrol(object):
     def api_set_mode(self, mode:int):
         # Check if mode is valid
         if mode not in [-1, 0, 10]:
-            logger.warning(f'[BatCtrl] API: Invalid mode {mode}')
+            logger.warning(f'[BatCTRL] API: Invalid mode {mode}')
             return
         
-        logger.info(f'[BatCtrl] API: Setting mode to {mode}')
+        logger.info(f'[BatCTRL] API: Setting mode to {mode}')
         self.api_overwrite = True
             
         if mode != self.last_mode:
@@ -616,9 +618,9 @@ class Batcontrol(object):
 
     def api_set_charge_rate(self, charge_rate:int):
         if charge_rate < 0:
-            logger.warning(f'[BatCtrl] API: Invalid charge rate {charge_rate}')
+            logger.warning(f'[BatCTRL] API: Invalid charge rate {charge_rate}')
             return
-        logger.info(f'[BatCtrl] API: Setting charge rate to {charge_rate}')
+        logger.info(f'[BatCTRL] API: Setting charge rate to {charge_rate}')
         self.api_overwrite = True
         if charge_rate != self.last_charge_rate:
             self.force_charge(charge_rate)
@@ -627,25 +629,25 @@ class Batcontrol(object):
 
     def api_set_always_allow_discharge_limit(self, limit:float):
         if limit < 0 or limit > 1:
-            logger.warning(f'[BatCtrl] API: Invalid always allow discharge limit {limit}')
+            logger.warning(f'[BatCTRL] API: Invalid always allow discharge limit {limit}')
             return
-        logger.info(f'[BatCtrl] API: Setting always allow discharge limit to {limit}')
+        logger.info(f'[BatCTRL] API: Setting always allow discharge limit to {limit}')
         self.always_allow_discharge_limit = limit
         return
     
     def api_set_max_charging_from_grid_limit(self, limit:float):
         if limit < 0 or limit > 1:
-            logger.warning(f'[BatCtrl] API: Invalid max charging from grid limit {limit}')
+            logger.warning(f'[BatCTRL] API: Invalid max charging from grid limit {limit}')
             return
-        logger.info(f'[BatCtrl] API: Setting max charging from grid limit to {limit}')
+        logger.info(f'[BatCTRL] API: Setting max charging from grid limit to {limit}')
         self.max_charging_from_grid_limit = limit
         return
 
     def api_set_min_price_difference(self, min_price_difference:float):
         if min_price_difference < 0:
-            logger.warning(f'[BatCtrl] API: Invalid min price difference {min_price_difference}')
+            logger.warning(f'[BatCTRL] API: Invalid min price difference {min_price_difference}')
             return
-        logger.info(f'[BatCtrl] API: Setting min price difference to {min_price_difference}')
+        logger.info(f'[BatCTRL] API: Setting min price difference to {min_price_difference}')
         self.min_price_difference = min_price_difference
         return
 
