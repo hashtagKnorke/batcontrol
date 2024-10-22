@@ -30,6 +30,8 @@
 #
 #            /min_price_difference     : float  # Minimum price difference in EUR
 #
+#            /discharge_blocked        : bool  # Discharge is blocked by other sources
+#
 #
 #    Following statistical arrays as JSON Arrays
 #            /FCST/production        # Forecasted production in W
@@ -239,6 +241,11 @@ class MQTT_API(object):
     def publish_last_evaluation_time(self, timestamp:float) -> None:
         if self.client.is_connected() == True:
             self.client.publish(self.base_topic + '/last_evaluation', f'{timestamp:.0f}')
+        return
+    
+    def publish_discharge_blocked(self, discharge_blocked:bool) -> None:
+        if self.client.is_connected() == True:
+            self.client.publish(self.base_topic + '/discharge_blocked', str(discharge_blocked))
         return
     
     # For depended APIs like the Fronius Inverter classes, which is not directly batcontrol.
