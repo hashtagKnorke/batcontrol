@@ -17,7 +17,7 @@ class InverterBaseclass(object):
         raise RuntimeError("[Inverter Base Class] Function 'get_free_capacity' not implemented")
     
     def get_max_capacity():
-        raise RuntimeError("[Inverter Base Class] Function 'get_max_soc' not implemented")
+        raise RuntimeError("[Inverter Base Class] Function 'get_max_capacity' not implemented")
 
     def get_SOC():
         raise RuntimeError("[Inverter Base Class] Function 'get_SOC' not implemented")
