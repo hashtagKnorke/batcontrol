@@ -1,0 +1,3 @@
+[submodule "thermia-online-api"]
+	path = thermia-online-api
+	url = https://github.com/klejejs/python-thermia-online-api.git
