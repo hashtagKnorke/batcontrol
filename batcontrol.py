@@ -14,6 +14,11 @@ from forecastsolar import forecastsolar
 from dynamictariff import dynamictariff
 from inverter import inverter
 from logfilelimiter import logfilelimiter
+from heatpump import Heatpump
+
+# Add the subdirectory to the Python path
+sys.path.append(os.path.join(os.path.dirname(__file__), 'thermia_online_api'))
+
 
 LOGFILE = "batcontrol.log"
 CONFIGFILE = "config/batcontrol_config.yaml"
@@ -101,7 +106,11 @@ class Batcontrol(object):
             TIME_BETWEEN_UTILITY_API_CALLS
         )
 
+        self.heatpump = Heatpump.Heatpump(config['heatpump']) 
+
+
         self.inverter = inverter.Inverter(config['inverter'])
+
 
         self.pvsettings = config['pvinstallations']
         self.fc_solar = forecastsolar.ForecastSolar(self.pvsettings, timezone)
@@ -647,6 +656,8 @@ class Batcontrol(object):
             self.mqtt_api.publish_last_evaluation_time(self.last_run_time)
             # Trigger Inverter
             self.inverter.refresh_api_values()
+            if self.heatpump is not None:
+                self.heatpump.refresh_api_values()
 
     def api_set_mode(self, mode:int):
         # Check if mode is valid
