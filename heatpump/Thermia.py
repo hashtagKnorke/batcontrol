@@ -77,7 +77,7 @@ class ThermiaHeatpump(HeatpumpBaseclass):
  #       ) + 'max_grid_charge_rate', self.api_set_max_grid_charge_rate, int)
  
     def refresh_api_values(self):
-        if self.mqtt_api & self.heat_pump:
+        if self.mqtt_api and self.heat_pump:
             self.heat_pump.update_data()
             self.mqtt_api.generic_publish(
                 self._get_mqtt_topic() + 'supply_line_temperature', self.heat_pump.supply_line_temperature)
