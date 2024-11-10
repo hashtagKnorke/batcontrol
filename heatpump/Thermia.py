@@ -57,7 +57,7 @@ class ThermiaHeatpump(HeatpumpBaseclass):
 
         heat_pump = thermia.heat_pumps[0]
         self.heat_pump = heat_pump
-        logger.debug("initialized HeatPump" + self.heat_pump)
+        logger.debug("initialized HeatPump" + str(self.heat_pump))
         logger.debug("current supply line temperature: " + str(heat_pump.supply_line_temperature))
 
     def __del__(self):
