@@ -167,9 +167,15 @@ class Batcontrol(object):
                     self.api_set_min_price_difference,
                     float
                 )
+                logger.info(f'[Main] MQTT Callbacks registered ')   
+
                 # Inverter Callbacks
                 self.inverter.activate_mqtt(self.mqtt_api)
-                logger.info(f'[Main] MQTT Connection ready ')
+                logger.info(f'[Main] MQTT Connection to Inverter ready ')
+
+                # Heatpump Callbacks
+                self.heatpump.activate_mqtt(self.mqtt_api)
+                logger.info(f'[Main] MQTT Connection to Heatpump ready ')
 
 
 
