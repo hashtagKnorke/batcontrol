@@ -1,16 +1,10 @@
-import time
-import os
+import inspect
 import logging
-import json
-import hashlib
-import requests
 
 from ThermiaOnlineAPI.model.HeatPump import ThermiaHeatPump
 import mqtt_api
 from .baseclass import HeatpumpBaseclass
 from typing import Optional
-from datetime import datetime, timedelta
-import sys
 
 
 from ThermiaOnlineAPI import Thermia
@@ -20,34 +14,12 @@ logger = logging.getLogger('__main__')
 logger.info(f'[Heatpump] loading module ')
 
 
-def hash_utf8(x):
-    if isinstance(x, str):
-        x = x.encode("utf-8")
-    return hashlib.md5(x).hexdigest()
-
-
-def strip_dict(original):
-    # return unmodified original if its not a dict
-    if not type(original) == dict:
-        return original
-    stripped_copy = {}
-    for key in original.keys():
-        if not key.startswith('_'):
-            stripped_copy[key] = original[key]
-    return stripped_copy
-
 class ThermiaHeatpump(HeatpumpBaseclass):
     heat_pump: ThermiaHeatPump
     mqtt_api: Optional['mqtt_api.MqttApi'] = None
 
     def __init__(self, user, password) -> None:
         super().__init__()
-        self.login_attempts = 0
-        self.address = "aa"
-        self.capacity = -1
-        self.max_grid_charge_rate = 0
-        self.max_pv_charge_rate = 0
-        self.nonce = 0
         self.user = user
         self.password = password
 
@@ -85,13 +57,17 @@ class ThermiaHeatpump(HeatpumpBaseclass):
             self.heat_pump.update_data()
             self.mqtt_api.generic_publish(
                 self._get_mqtt_topic() + 'supply_line_temperature', self.heat_pump.supply_line_temperature)
-            for attr in vars(self.heat_pump):
-                value = getattr(self.heat_pump, attr)
+            for name,value in self._get_all_properties(self.heat_pump):
+                logger.debug(f"[Heatpump]   publish {name}: {value}")
                 self.mqtt_api.generic_publish(
-                    self._get_mqtt_topic() + attr, value
+                    self._get_mqtt_topic() + name, value
                 )
+        logger.debug(f'[Heatpump] API values refreshed')
             
-           
+    def _get_all_properties(self, obj):
+        for name, method in inspect.getmembers(obj.__class__, lambda m: isinstance(m, property)):
+            yield name, getattr(obj, name)
+       
 
  #   def api_set_max_grid_charge_rate(self, max_grid_charge_rate: int):
  #       if max_grid_charge_rate < 0:
