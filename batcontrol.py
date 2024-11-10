@@ -173,8 +173,14 @@ class Batcontrol(object):
                     self.api_set_min_price_difference,
                     float
                 )
+                logger.info(f'[Main] MQTT Callbacks registered ')   
+
                 # Inverter Callbacks
                 self.inverter.activate_mqtt(self.mqtt_api)
+                # Heatpump Callbacks
+                self.heatpump.activate_mqtt(self.mqtt_api)
+                logger.info(f'[Main] MQTT Connection to Heatpump ready ')
+
 
         self.evcc_api = None
         if 'evcc' in config.keys():
@@ -185,11 +191,13 @@ class Batcontrol(object):
                 self.evcc_api.register_block_function(self.set_discharge_blocked)
                 self.evcc_api.wait_ready()
                 logger.info('[Main] EVCC Connection ready')
-
+        
+ 
     def shutdown(self):
         logger.info('[Main] Shutting down Batcontrol')
         try:
             self.inverter.shutdown()
+            # todo: shutdown other components
             del self.inverter
         except:
             pass
