@@ -56,7 +56,7 @@ class ThermiaHeatpump(HeatpumpBaseclass):
         print("Connected: " + str(thermia.connected))
 
         heat_pump = thermia.heat_pumps[0]
-
+        self.heat_pump = heat_pump
         #heat_pump.debug()
         print("current supply line temperature: " + str(heat_pump.supply_line_temperature))
 
