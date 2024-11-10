@@ -6,6 +6,7 @@ import hashlib
 import requests
 
 from ThermiaOnlineAPI.model.HeatPump import ThermiaHeatPump
+import mqtt_api
 from .baseclass import HeatpumpBaseclass
 from typing import Optional
 from datetime import datetime, timedelta
@@ -37,6 +38,7 @@ def strip_dict(original):
 
 class ThermiaHeatpump(HeatpumpBaseclass):
     heat_pump: ThermiaHeatPump
+    mqtt_api: Optional['mqtt_api.MqttApi'] = None
 
     def __init__(self, user, password) -> None:
         super().__init__()
@@ -59,17 +61,16 @@ class ThermiaHeatpump(HeatpumpBaseclass):
         print("current supply line temperature: " + str(heat_pump.supply_line_temperature))
 
     def __del__(self):
-        self.restore_battery_config()
-        self.restore_time_of_use_config()
-        self.logout()
+        # nothing so far
+        pass
 
+       
    # Start API functions
    # MQTT publishes all internal values.
    #
    # Topic is: base_topic + '/heatpumps/0/'
    #
     def activate_mqtt(self, api_mqtt_api):
-        import mqtt_api
         self.mqtt_api = api_mqtt_api
         # /set is appended to the topic
  #       self.mqtt_api.register_set_callback(self._get_mqtt_topic(
