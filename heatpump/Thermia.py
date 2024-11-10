@@ -53,12 +53,12 @@ class ThermiaHeatpump(HeatpumpBaseclass):
 
         thermia = Thermia(user, password)
 
-        print("Connected: " + str(thermia.connected))
+        logger.debug("Connected: " + str(thermia.connected))
 
         heat_pump = thermia.heat_pumps[0]
         self.heat_pump = heat_pump
-        #heat_pump.debug()
-        print("current supply line temperature: " + str(heat_pump.supply_line_temperature))
+        logger.debug("initialized HeatPump" + self.heat_pump)
+        logger.debug("current supply line temperature: " + str(heat_pump.supply_line_temperature))
 
     def __del__(self):
         # nothing so far
@@ -72,11 +72,15 @@ class ThermiaHeatpump(HeatpumpBaseclass):
    #
     def activate_mqtt(self, api_mqtt_api):
         self.mqtt_api = api_mqtt_api
+        logger.info(f'[Heatpump] Activating MQTT')
+        logger.debug(f'[Heatpump] MQTT topic: {self._get_mqtt_topic()}')
+        logger.debug(f'[Heatpump] MQTT driver: {self.mqtt_api}')
         # /set is appended to the topic
  #       self.mqtt_api.register_set_callback(self._get_mqtt_topic(
  #       ) + 'max_grid_charge_rate', self.api_set_max_grid_charge_rate, int)
  
     def refresh_api_values(self):
+        logger.debug(f'[Heatpump] Refreshing API values')
         if self.mqtt_api and self.heat_pump:
             self.heat_pump.update_data()
             self.mqtt_api.generic_publish(
