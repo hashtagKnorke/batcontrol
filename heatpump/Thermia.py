@@ -57,8 +57,11 @@ class ThermiaHeatpump(HeatpumpBaseclass):
             self.heat_pump.update_data()
             self.mqtt_api.generic_publish(
                 self._get_mqtt_topic() + 'supply_line_temperature', self.heat_pump.supply_line_temperature)
-            for name,value in self._get_all_properties(self.heat_pump):
+            for name, value in self._get_all_properties(self.heat_pump):
                 logger.debug(f"[Heatpump]   publish {name}: {value}")
+                # Ensure the value is a supported type
+                if not isinstance(value, (str, bytearray, int, float, type(None))):
+                    value = str(value)
                 self.mqtt_api.generic_publish(
                     self._get_mqtt_topic() + name, value
                 )
@@ -77,5 +80,3 @@ class ThermiaHeatpump(HeatpumpBaseclass):
  #       logger.info(
  #           f'[Heatpump] API: Setting max_grid_charge_rate: {max_grid_charge_rate}W')
  #       self.max_grid_charge_rate = max_grid_charge_rate
-
-   
