@@ -15,7 +15,7 @@ logger.info(f'[Heatpump] loading module ')
 
 
 class ThermiaHeatpump(HeatpumpBaseclass):
-    heat_pump: ThermiaHeatPump
+    heat_pump: ThermiaHeatPump = None
     mqtt_api: Optional['mqtt_api.MqttApi'] = None
 
     def __init__(self, user, password) -> None:
