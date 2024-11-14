@@ -23,7 +23,7 @@ class ThermiaHeatpump(HeatpumpBaseclass):
         self.user = user
         self.password = password
 
-        self.ensure_connection(user, password)
+        self.ensure_connection()
 
     def ensure_connection(self):
         if not self.heat_pump:
