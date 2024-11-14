@@ -23,14 +23,21 @@ class ThermiaHeatpump(HeatpumpBaseclass):
         self.user = user
         self.password = password
 
-        thermia = Thermia(user, password)
+        self.ensure_connection(user, password)
 
-        logger.debug("Connected: " + str(thermia.connected))
+    def ensure_connection(self):
+        if not self.heat_pump:
+            try:
+                thermia = Thermia(self.user, self.password)
+                logger.debug("Connected: " + str(thermia.connected))
 
-        heat_pump = thermia.heat_pumps[0]
-        self.heat_pump = heat_pump
-        logger.debug("initialized HeatPump" + str(self.heat_pump))
-        logger.debug("current supply line temperature: " + str(heat_pump.supply_line_temperature))
+                heat_pump = thermia.heat_pumps[0]
+                self.heat_pump = heat_pump
+                logger.debug("initialized HeatPump" + str(self.heat_pump))
+                logger.debug("current supply line temperature: " + str(heat_pump.supply_line_temperature))
+            except Exception as e:
+                logger.error(f"Failed to connect to Thermia: {e}")
+                self.heat_pump = None
 
     def __del__(self):
         # nothing so far
@@ -53,19 +60,25 @@ class ThermiaHeatpump(HeatpumpBaseclass):
  
     def refresh_api_values(self):
         logger.debug(f'[Heatpump] Refreshing API values')
+        self.ensure_connection()
+        
         if self.mqtt_api and self.heat_pump:
-            self.heat_pump.update_data()
-            self.mqtt_api.generic_publish(
-                self._get_mqtt_topic() + 'supply_line_temperature', self.heat_pump.supply_line_temperature)
-            for name, value in self._get_all_properties(self.heat_pump):
-                logger.debug(f"[Heatpump]   publish {name}: {value}")
-                # Ensure the value is a supported type
-                if not isinstance(value, (str, bytearray, int, float, type(None))):
-                    value = str(value)
+            try:
+                self.heat_pump.update_data()
                 self.mqtt_api.generic_publish(
-                    self._get_mqtt_topic() + name, value
-                )
-        logger.debug(f'[Heatpump] API values refreshed')
+                    self._get_mqtt_topic() + 'xx_supply_line_temperature', self.heat_pump.supply_line_temperature)
+                for name, value in self._get_all_properties(self.heat_pump):
+                    logger.debug(f"[Heatpump]   publish {name}: {value}")
+                    # Ensure the value is a supported type
+                    if not isinstance(value, (str, bytearray, int, float, type(None))):
+                        value = str(value)
+                    self.mqtt_api.generic_publish(
+                        self._get_mqtt_topic() + name, value
+                    )
+                logger.debug(f'[Heatpump] API values refreshed')
+            except Exception as e:
+                logger.error(f"Failed to refresh API values: {e}")
+        
             
     def _get_all_properties(self, obj):
         for name, method in inspect.getmembers(obj.__class__, lambda m: isinstance(m, property)):
