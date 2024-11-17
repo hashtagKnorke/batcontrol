@@ -12,6 +12,12 @@ RUN apk add --no-cache \
             py3-requests\
             py3-paho-mqtt
 
+
+# set the python path to include the thermia API submodule package
+ENV PYTHONPATH="/batcontrol/thermia_online_api:${PYTHONPATH}"
+
+## alternative to using the pythonpath is to copy the submodule package into the working directory
+
 COPY ./ /batcontrol
 WORKDIR /batcontrol
 RUN ln -s /data/ /batcontrol/config/
