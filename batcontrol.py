@@ -484,34 +484,53 @@ class Batcontrol(object):
             ]
             # set heatpump parameters
             heat_modes = ["N"] * max_hour
-            for h in range(max_hour):
-                net_cons = net_consumption[h]
-                price=prices[h]
-                if net_cons < -1 * (assumed_hotwater_reheat_energy_demand+assumed_hotwater_boost_energy_demand):
-                    # we enough have over-production for hotwater boost    
-                    logger.debug(f'[BatCTRL:HP] Hotwater Boost at +{h}h would be <free>')
-                    heat_modes[h] = "W"
-                elif net_consumption[h] < -1 * assumed_hotwater_reheat_energy_demand:
-                    # we enough have over-production for hotwater reheat
-                    logger.debug(f'[BatCTRL:HP] Hotwater Reheat at +{h}h would be <free>')
-                else :
-                    # we have no over-production
-                    logger.debug(f'[BatCTRL:HP] No free energy at +{h}h')
-                    if price > 0.3:
-                        heat_modes[h] = "R"
-                        logger.debug(f'[BatCTRL:HP] R High {price} price  at +{h}h')
-                    elif price > 0.4:
-                        heat_modes[h] = "B"
-                        logger.debug(f'[BatCTRL:HP] B Very high {price} price at +{h}h')    
-                    elif price > 0.5:
-                        heat_modes[h] = "E"
-                        logger.debug(f'[BatCTRL:HP] E Extremely high {price} price at +{h}h')    
-                    else:
-                        heat_modes[h] = "N"
-                        logger.debug(f'[BatCTRL:HP] H Normal {price} price at +{h}h')
-                    ## todo find times where heat temp reduction makes sense
-            logger.debug(f'[BatCTRL:HP] Heatpump Modes: {heat_modes}')
+
+
             
+            # Sort hours by highest prices descending
+            sorted_hours_by_price = sorted(range(max_hour), key=lambda h: prices[h], reverse=True)
+
+            ## config for the strategy
+            # Set the maximum number of hours and the maximum duration for each mode
+            # The strategy is to set the heat pump to the most energy saving mode in time slots 
+            # with the highest price first, but having a maximum number of hours and a maximum duration for each mode
+            # and having a min trigger price for each mode
+            min_price_for_evu_block=0.6
+            max_evu_block_hours = 14
+            max_evu_block_duration = 6
+            min_price_for_hot_water_block=0.4
+            max_hot_water_block_hours = 10
+            max_hot_water_block_duration = 4
+            min_price_for_reduced_heat = 0.3
+            max_reduced_heat_hours = 14
+            max_reduced_heat_duration = 6
+            
+            # Iterate over hours sorted by price and set modes based on trigger price and max hours per day limits
+            for h in sorted_hours_by_price:
+                if prices[h] >= min_price_for_evu_block and max_evu_block_hours > 0 and max_evu_block_duration > 0:
+                    heat_modes[h] = "E"
+                    max_evu_block_hours -= 1
+                    logger.debug(f'[BatCTRL:HP] Set EVU Block at +{h}h due to high price {prices[h]}')
+                elif prices[h] >= min_price_for_hot_water_block and max_hot_water_block_hours > 0 and max_hot_water_block_duration > 0:
+                    heat_modes[h] = "B"
+                    max_hot_water_block_hours -= 1
+                    logger.debug(f'[BatCTRL:HP] Set Hot Water Block at +{h}h due to high price {prices[h]}')
+                elif prices[h] >= min_price_for_reduced_heat and max_reduced_heat_hours > 0 and max_reduced_heat_duration > 0:
+                    heat_modes[h] = "R"
+                    max_reduced_heat_hours -= 1
+                    logger.debug(f'[BatCTRL:HP] Set Reduced Heat at +{h}h due to high price {prices[h]}')
+                else:
+                    heat_modes[h] = "N"
+                    logger.debug(f'[BatCTRL:HP] Set Normal Heat at +{h}h due to price {prices[h]}')
+           
+            # Evaluate the duration of each mode and downgrade to lower mode if necessary
+            self.adjust_mode_duration(heat_modes, prices,  "E", "B", max_evu_block_duration)
+            self.adjust_mode_duration(heat_modes, prices,  "B", "R", max_hot_water_block_duration) 
+            self.adjust_mode_duration(heat_modes, prices,  "R", "N", max_reduced_heat_duration)          
+                        
+                        
+            logger.debug(f'[BatCTRL:HP] Adjusted Heatpump Modes: {heat_modes}')
+
             # Iterate over heat modes and handle windows of equal mode
             start_index = 0
             current_mode = heat_modes[0]
@@ -527,6 +546,50 @@ class Batcontrol(object):
             self.applyMode(current_mode, start_index, max_hour-1)
         return
     
+    def adjust_mode_duration(self, heat_modes, prices, inspected_mode, downgrade_mode, max_mode_duration):
+        """
+        Adjust the duration of a specific heat mode and downgrade it if it exceeds the maximum allowed duration.
+
+        Parameters:
+        -----------
+        heat_modes : list
+            List of heat modes for each hour.
+        prices : dict
+            Dictionary of energy prices for each hour.
+        inspected_mode : str
+            The heat mode to inspect and potentially downgrade.
+        downgrade_mode : str
+            The heat mode to downgrade to if the inspected mode exceeds the maximum duration.
+        max_mode_duration : int
+            The maximum allowed duration for the inspected mode.
+
+        Returns:
+        --------
+        None
+        """
+        mode_duration = 0
+        start_index = -1
+
+        for h in range(len(heat_modes)):
+            if heat_modes[h] == inspected_mode:
+                if start_index == -1:
+                    start_index = h
+                mode_duration += 1
+
+                if mode_duration > max_mode_duration:
+                    if prices[start_index] <= prices[h]:
+                        heat_modes[start_index] = downgrade_mode
+                        logger.debug(f'[BatCTRL:HP] Downgrade {inspected_mode} to {downgrade_mode} at +{start_index}h due to duration limit')
+                        start_index += 1
+                    else:
+                        heat_modes[h] = downgrade_mode
+                        logger.debug(f'[BatCTRL:HP] Downgrade {inspected_mode} to {downgrade_mode} at +{h}h due to duration limit')
+                    mode_duration = 0
+                    start_index = -1
+            else:
+                mode_duration = 0
+                start_index = -1
+
 
     def applyMode(self, mode, start_index, end_index):
         logger.debug(f'[BatCTRL:HP] Apply Mode {mode} from +{start_index}h to +{end_index}h')   
