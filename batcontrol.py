@@ -473,12 +473,12 @@ class Batcontrol(object):
             for i in range(1, max_hour):
                 if heat_modes[i] != current_mode:
                     # Handle the range from start_index to i-1
-                    self.applyMode(current_mode, start_index, i-1)
+                    self.applyMode(current_mode, start_index, i)
                     start_index = i
                     current_mode = heat_modes[i]
 
             # Handle the last range
-            self.applyMode(current_mode, start_index, max_hour-1)
+            self.applyMode(current_mode, start_index, max_hour)
         return
     
     def adjust_mode_duration(self, heat_modes, prices, inspected_mode, downgrade_mode, max_mode_duration):
