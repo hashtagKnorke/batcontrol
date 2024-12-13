@@ -446,6 +446,27 @@ class Batcontrol(object):
 
     # %%
     def set_heatpump_parameters(self, net_consumption: np.ndarray, prices: dict):
+        """
+        Set the parameters for the heat pump based on net energy consumption and energy prices.
+        Parameters:
+        -----------
+        net_consumption : np.ndarray
+            An array representing the net energy consumption for each hour.
+        prices : dict
+            A dictionary where keys are hours and values are the corresponding energy prices.
+        Returns:
+        --------
+        None
+        Notes:
+        ------
+        This method determines the operating mode of the heat pump for each hour based on the net energy consumption
+        and energy prices. The modes are:
+            - "N": Heat normal
+            - "B": Hot water block
+            - "E": EVU Block
+            - "W": Hot water boost
+        The method logs the decision-making process and applies the determined modes over continuous time windows.
+        """
         # ensure availability of data
         max_hour = min(len(net_consumption), len(prices))
 
@@ -453,17 +474,23 @@ class Batcontrol(object):
         assumed_hotwater_reheat_energy_demand = 1500 # watthour
         assumed_hotwater_boost_energy_demand = 1500 # watthour
 
-
         if self.heatpump is not None:
-            modes: list = ["H", "R", "B", "E"]  
-            ## set heatpump parameters
-            heat_modes = ["H"] * max_hour
+            modes: list = [
+            "N",  # Heat normal
+            "R",  # Heat reduced temperature
+            "B",  # Hot water block
+            "E",  # EVU Block
+            "W",  # Hot water boost
+            ]
+            # set heatpump parameters
+            heat_modes = ["N"] * max_hour
             for h in range(max_hour):
                 net_cons = net_consumption[h]
                 price=prices[h]
                 if net_cons < -1 * (assumed_hotwater_reheat_energy_demand+assumed_hotwater_boost_energy_demand):
                     # we enough have over-production for hotwater boost    
                     logger.debug(f'[BatCTRL:HP] Hotwater Boost at +{h}h would be <free>')
+                    heat_modes[h] = "W"
                 elif net_consumption[h] < -1 * assumed_hotwater_reheat_energy_demand:
                     # we enough have over-production for hotwater reheat
                     logger.debug(f'[BatCTRL:HP] Hotwater Reheat at +{h}h would be <free>')
@@ -471,13 +498,16 @@ class Batcontrol(object):
                     # we have no over-production
                     logger.debug(f'[BatCTRL:HP] No free energy at +{h}h')
                     if price > 0.3:
+                        heat_modes[h] = "R"
+                        logger.debug(f'[BatCTRL:HP] R High {price} price  at +{h}h')
+                    elif price > 0.4:
                         heat_modes[h] = "B"
-                        logger.debug(f'[BatCTRL:HP] B High {price} price  at +{h}h')
+                        logger.debug(f'[BatCTRL:HP] B Very high {price} price at +{h}h')    
                     elif price > 0.5:
                         heat_modes[h] = "E"
                         logger.debug(f'[BatCTRL:HP] E Extremely high {price} price at +{h}h')    
                     else:
-                        heat_modes[h] = "H"
+                        heat_modes[h] = "N"
                         logger.debug(f'[BatCTRL:HP] H Normal {price} price at +{h}h')
                     ## todo find times where heat temp reduction makes sense
             logger.debug(f'[BatCTRL:HP] Heatpump Modes: {heat_modes}')
@@ -499,6 +529,7 @@ class Batcontrol(object):
     
 
     def applyMode(self, mode, start_index, end_index):
+        logger.debug(f'[BatCTRL:HP] Apply Mode {mode} from +{start_index}h to +{end_index}h')   
 
         hours_until_range_start = datetime.timedelta(hours=start_index)
         range_duration = datetime.timedelta(hours=end_index-start_index)
@@ -508,14 +539,14 @@ class Batcontrol(object):
         range_end_time = range_start_time+range_duration
         
         
-        start_str = range_start_time.astimezone(self.timezone).strftime("%H:59")
-        end_str = range_end_time.astimezone(self.timezone).strftime("%H:59")
-        if mode == "H":
-            logger.debug(f'[BatCTRL:HP] Set Heatpump to Heating from {start_str} to {end_str}') 
+        start_str = range_start_time.astimezone(self.timezone).strftime("%H:%M")
+        end_str = range_end_time.astimezone(self.timezone).strftime("%H:%M")
+        if mode == "N":
+            logger.debug(f'[BatCTRL:HP] Set Heatpump to NORMAL Heating from {start_str} to {end_str}') 
         elif mode == "R":
-            logger.debug(f'[BatCTRL:HP] Set Heatpump to reduced Heating from {start_str} to {end_str}') 
+            logger.debug(f'[BatCTRL:HP] Set Heatpump to REDUCED Heating from {start_str} to {end_str}') 
         elif mode == "B":
-            logger.debug(f'[BatCTRL:HP] Set Heatpump to Hot water block from {start_str} to {end_str}') 
+            logger.debug(f'[BatCTRL:HP] Set Heatpump to Hot water BLOCK from {start_str} to {end_str}') 
         elif mode == "E":
             logger.debug(f'[BatCTRL:HP] Set Heatpump to EVU block from {start_str} to {end_str}') 
             self.heatpump._plan_for_high_price_window(range_start_time, range_end_time)
