@@ -178,7 +178,7 @@ class ThermiaHeatpump(HeatpumpBaseclass):
         assumed_hotwater_reheat_energy_demand = 1500 # watthour
         assumed_hotwater_boost_energy_demand = 1500 # watthour
 
-        if self.heatpump is not None:
+        if self.heat_pump is not None:
             modes: list = [
             "H",  # Heat increased temperature
             "N",  # Heat normal
@@ -200,31 +200,65 @@ class ThermiaHeatpump(HeatpumpBaseclass):
             # The strategy is to set the heat pump to the most energy saving mode in time slots 
             # with the highest price first, but having a maximum number of hours and a maximum duration for each mode
             # and having a min trigger price for each mode
+            ### EVU Block
             min_price_for_evu_block=0.6
             max_evu_block_hours = 14
             max_evu_block_duration = 6
+            ### Hot Water Block
             min_price_for_hot_water_block=0.4
             max_hot_water_block_hours = 10
             max_hot_water_block_duration = 4
+            ### Reduced Heat
             min_price_for_reduced_heat = 0.3
             max_reduced_heat_hours = 14
             max_reduced_heat_duration = 6
-            
-            ##TODO #2 add handling for hot water boost and increased temperature
+            reduced_heat_temperature = 18
+            ### Increased Heat
+            max_price_for_increased_heat = 0.2
+            min_energy_surplus_for_increased_heat = 500  
+            max_increased_heat_hours = 14
+            max_increased_heat_duration = 6
+            increased_heat_temperature = 22
+            max_increased_heat_outdoor_temperature = 15
+            ### Hot Water Boost
+            max_price_for_hot_water_boost = 0.1
+            min_energy_surplus_for_hot_water_boost = 2500  
+            max_hot_water_boost_hours = 1
 
+
+            ### counters for this evaluation
+            remaining_evu_block_hours = max_evu_block_hours
+            remaining_hot_water_block_hours = max_hot_water_block_hours
+            remaining_reduced_heat_hours = max_reduced_heat_hours
+            remaining_increased_heat_hours = max_increased_heat_hours
+            remaining_hot_water_boost_hours = max_hot_water_boost_hours
+
+            
             # Iterate over hours sorted by price and set modes based on trigger price and max hours per day limits
             for h in sorted_hours_by_price:
-                if prices[h] >= min_price_for_evu_block and max_evu_block_hours > 0 and max_evu_block_duration > 0:
+                if net_consumption[h] < -min_energy_surplus_for_hot_water_boost and remaining_hot_water_boost_hours > 0:
+                    heat_modes[h] = "W"
+                    remaining_hot_water_boost_hours -= 1
+                    logger.debug(f'[BatCTRL:HP] Set Hot Water Boost at +{h}h due to high surplus {net_consumption[h]}')
+                elif net_consumption[h] < -min_energy_surplus_for_increased_heat or prices[h] <= max_price_for_increased_heat and remaining_increased_heat_hours > 0:    
+                    if self.heat_pump.outdoor_temperature < max_increased_heat_outdoor_temperature:
+                        heat_modes[h] = "H"
+                        remaining_increased_heat_hours -= 1
+                        logger.debug(f'[BatCTRL:HP] Set Increased Heat at +{h}h due to high surplus {net_consumption[h]} and low outdoor temperature {self.heat_pump.outdoor_temperature}')
+                    else:
+                        heat_modes[h] = "N"
+                        logger.debug(f'[BatCTRL:HP] Set Normal Heat at +{h}h due to high surplus {net_consumption[h]} and high outdoor temperature {self.heat_pump.outdoor_temperature}')
+                if prices[h] >= min_price_for_evu_block and remaining_evu_block_hours > 0:
                     heat_modes[h] = "E"
-                    max_evu_block_hours -= 1
+                    remaining_evu_block_hours -= 1
                     logger.debug(f'[BatCTRL:HP] Set EVU Block at +{h}h due to high price {prices[h]}')
-                elif prices[h] >= min_price_for_hot_water_block and max_hot_water_block_hours > 0 and max_hot_water_block_duration > 0:
+                elif prices[h] >= min_price_for_hot_water_block and remaining_hot_water_block_hours > 0:
                     heat_modes[h] = "B"
-                    max_hot_water_block_hours -= 1
+                    remaining_hot_water_block_hours -= 1
                     logger.debug(f'[BatCTRL:HP] Set Hot Water Block at +{h}h due to high price {prices[h]}')
-                elif prices[h] >= min_price_for_reduced_heat and max_reduced_heat_hours > 0 and max_reduced_heat_duration > 0:
+                elif prices[h] >= min_price_for_reduced_heat and remaining_reduced_heat_hours > 0:
                     heat_modes[h] = "R"
-                    max_reduced_heat_hours -= 1
+                    remaining_reduced_heat_hours -= 1
                     logger.debug(f'[BatCTRL:HP] Set Reduced Heat at +{h}h due to high price {prices[h]}')
                 else:
                     heat_modes[h] = "N"
@@ -234,7 +268,7 @@ class ThermiaHeatpump(HeatpumpBaseclass):
             self.adjust_mode_duration(heat_modes, prices,  "E", "B", max_evu_block_duration)
             self.adjust_mode_duration(heat_modes, prices,  "B", "R", max_hot_water_block_duration) 
             self.adjust_mode_duration(heat_modes, prices,  "R", "N", max_reduced_heat_duration)          
-                        
+            self.adjust_mode_duration(heat_modes, prices,  "H", "N", max_increased_heat_duration)               
                         
             logger.debug(f'[BatCTRL:HP] Adjusted Heatpump Modes: {heat_modes}')
 
@@ -302,7 +336,7 @@ class ThermiaHeatpump(HeatpumpBaseclass):
         logger.debug(f'[BatCTRL:HP] Apply Mode {mode} from +{start_index}h to +{end_index}h')   
 
         hours_until_range_start = datetime.timedelta(hours=start_index)
-        range_duration = datetime.timedelta(hours=end_index-start_index)
+        range_duration = datetime.timedelta(hours=end_index-start_index) +1 # add one hour to include the druartion of evenan single 1-hour slot
 
         curr_hour_start = datetime.datetime.now().replace(minute=0, second=0, microsecond=0)
         range_start_time = curr_hour_start+hours_until_range_start
@@ -319,7 +353,7 @@ class ThermiaHeatpump(HeatpumpBaseclass):
             logger.debug(f'[BatCTRL:HP] Set Heatpump to Hot water BLOCK from {start_str} to {end_str}') 
         elif mode == "E":
             logger.debug(f'[BatCTRL:HP] Set Heatpump to EVU block from {start_str} to {end_str}') 
-            self.heatpump._plan_for_high_price_window(range_start_time, range_end_time)
+            self._plan_for_high_price_window(range_start_time, range_end_time)
         else:
             logger.error(f'[BatCTRL:HP] Unknown heatpump mode: {mode}')
             raise ValueError(f'Unknown heatpump mode: {mode}')
