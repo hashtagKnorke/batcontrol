@@ -4,7 +4,7 @@ import datetime
 
 import numpy as np
 
-from ThermiaOnlineAPI.const import CAL_FUNCTION_EVU_MODE
+from ThermiaOnlineAPI.const import CAL_FUNCTION_EVU_MODE, CAL_FUNCTION_HOT_WATER_BLOCK, CAL_FUNCTION_REDUCED_HEATING_EFFECT
 from ThermiaOnlineAPI.model.HeatPump import ThermiaHeatPump
 from ThermiaOnlineAPI.model.Schedule import Schedule
 import mqtt_api
@@ -87,7 +87,7 @@ class ThermiaHeatpump(HeatpumpBaseclass):
         self.min_price_for_reduced_heat = self.fetch_param_from_config(config, "min_price_for_reduced_heat", 0.3)
         self.max_reduced_heat_hours = self.fetch_param_from_config(config, "max_reduced_heat_hours", 14)
         self.max_reduced_heat_duration = self.fetch_param_from_config(config, "max_reduced_heat_duration", 6)
-        self.reduced_heat_temperature = self.fetch_param_from_config(config, "reduced_heat_temperature", 18)
+        self.reduced_heat_temperature = self.fetch_param_from_config(config, "reduced_heat_temperature", 20)
         ### Increased Heat
         self.max_price_for_increased_heat = self.fetch_param_from_config(config, "max_price_for_increased_heat", 0.2)
         self.min_energy_surplus_for_increased_heat = self.fetch_param_from_config(config, "min_energy_surplus_for_increased_heat", 500)
@@ -161,6 +161,50 @@ class ThermiaHeatpump(HeatpumpBaseclass):
                         self._get_mqtt_topic() + name, value
                     )
                 logger.debug(f'[Heatpump] API values refreshed')
+                ## publish all config values with config/ prefix
+                self.mqtt_api.generic_publish(
+                    self._get_mqtt_topic() + 'config/min_price_for_evu_block', self.min_price_for_evu_block)
+                self.mqtt_api.generic_publish(
+                    self._get_mqtt_topic() + 'config/max_evu_block_hours', self.max_evu_block_hours)
+                self.mqtt_api.generic_publish(
+                    self._get_mqtt_topic() + 'config/max_evu_block_duration', self.max_evu_block_duration)
+                self.mqtt_api.generic_publish(
+                    self._get_mqtt_topic() + 'config/min_price_for_hot_water_block', self.min_price_for_hot_water_block)
+                self.mqtt_api.generic_publish(
+                    self._get_mqtt_topic() + 'config/max_hot_water_block_hours', self.max_hot_water_block_hours)
+                self.mqtt_api.generic_publish(
+                    self._get_mqtt_topic() + 'config/max_hot_water_block_duration', self.max_hot_water_block_duration)
+                self.mqtt_api.generic_publish(
+                    self._get_mqtt_topic() + 'config/min_price_for_reduced_heat', self.min_price_for_reduced_heat)
+                self.mqtt_api.generic_publish(
+                    self._get_mqtt_topic() + 'config/max_reduced_heat_hours', self.max_reduced_heat_hours)
+                self.mqtt_api.generic_publish(
+                    self._get_mqtt_topic() + 'config/max_reduced_heat_duration', self.max_reduced_heat_duration)
+                self.mqtt_api.generic_publish(
+                    self._get_mqtt_topic() + 'config/reduced_heat_temperature', self.reduced_heat_temperature)
+                self.mqtt_api.generic_publish(
+                    self._get_mqtt_topic() + 'config/max_price_for_increased_heat', self.max_price_for_increased_heat)
+                self.mqtt_api.generic_publish(
+                    self._get_mqtt_topic() + 'config/min_energy_surplus_for_increased_heat', self.min_energy_surplus_for_increased_heat)
+                self.mqtt_api.generic_publish(
+                    self._get_mqtt_topic() + 'config/max_increased_heat_hours', self.max_increased_heat_hours)
+                self.mqtt_api.generic_publish(
+                    self._get_mqtt_topic() + 'config/max_increased_heat_duration', self.max_increased_heat_duration)
+                self.mqtt_api.generic_publish(
+                    self._get_mqtt_topic() + 'config/increased_heat_temperature', self.increased_heat_temperature)
+                self.mqtt_api.generic_publish(
+                    self._get_mqtt_topic() + 'config/max_increased_heat_outdoor_temperature', self.max_increased_heat_outdoor_temperature)
+                self.mqtt_api.generic_publish(
+                    self._get_mqtt_topic() + 'config/min_energy_surplus_for_hot_water_boost', self.min_energy_surplus_for_hot_water_boost)
+                self.mqtt_api.generic_publish(
+                    self._get_mqtt_topic() + 'config/max_hot_water_boost_hours', self.max_hot_water_boost_hours)
+                
+                ## publish all strategy values with strategy/ prefix
+
+                for start_time, strategy in self.high_price_strategies.items():
+                    self.mqtt_api.generic_publish(
+                        self._get_mqtt_topic() + 'strategy/high_price_strategies/'+start_time.strftime("%Y-%m-%d_%H-%M"), strategy.schedule.functionId)
+                    
             except Exception as e:
                 logger.error(f"Failed to refresh API values: {e}")
         
@@ -169,47 +213,6 @@ class ThermiaHeatpump(HeatpumpBaseclass):
         for name, method in inspect.getmembers(obj.__class__, lambda m: isinstance(m, property)):
             yield name, getattr(obj, name)
        
-    def _plan_for_high_price_window(self, start_time: datetime, end_time: datetime):
-        """
-        Plan for high price window.
-
-        This method should be implemented by subclasses to provide the specific
-        logic for planning for high price window.
-
-        Args:
-            start_time (datetime): The start time of the high price window.
-            end_time (datetime): The end time of the high price window.
-        Raises:
-            Error: If the method is not implemented by the subclass.
-        """
-        ## round to full minutes
-        start_time = start_time.replace(second=0, microsecond=0)
-        end_time = end_time.replace(second=0, microsecond=0)
-
-        # Adjust start and end times for time zone of heatpump 
-        tz_name = self.heat_pump.installation_timezone
-        start_time = utils.adjust_times_for_timezone(start_time,tz_name)
-        end_time = utils.adjust_times_for_timezone(end_time,tz_name)
-        
-        duration = end_time - start_time
-        logger.info(f'[ThermiaHeatpump] Planning for high price window starting at {start_time}, duration: {duration}')
-        
-        # Check if a strategy already exists for the given start time
-        if start_time in self.high_price_strategies:
-            existing_strategy = self.high_price_strategies[start_time]
-            logger.info(f'[ThermiaHeatpump] High price handling strategy already exists for start time {start_time}: {existing_strategy}')
-            return
-        
-
-         
-        planned_schedule = Schedule(start=start_time, end=end_time, functionId=CAL_FUNCTION_EVU_MODE)
-        schedule = self.heat_pump.add_new_schedule(planned_schedule)
-        high_price_strategy = HighPriceHandlingStrategy(start_time, end_time, schedule)
-        logger.info(f'[ThermiaHeatpump] Created high price handling strategy: {high_price_strategy}')
-
-        self.high_price_strategies[start_time] = high_price_strategy
-        logger.info(f'[ThermiaHeatpump] Stored high price handling strategy for start time {start_time}')
-
 
     def set_heatpump_parameters(self, net_consumption: np.ndarray, prices: dict):
         """
@@ -388,11 +391,88 @@ class ThermiaHeatpump(HeatpumpBaseclass):
             logger.debug(f'[BatCTRL:HP] Set Heatpump to Hot water BLOCK from {start_str} to {end_str}') 
         elif mode == "E":
             logger.debug(f'[BatCTRL:HP] Set Heatpump to EVU block from {start_str} to {end_str}') 
-            self._plan_for_high_price_window(range_start_time, range_end_time)
+            self.ensure_strategy_for_time_window(range_start_time, range_end_time)
         else:
             logger.error(f'[BatCTRL:HP] Unknown heatpump mode: {mode}')
             raise ValueError(f'Unknown heatpump mode: {mode}')
         
+    def ensure_strategy_for_time_window(self, start_time: datetime, end_time: datetime, mode: str):
+            """
+            check whether strategy for certain
+            time window is already present or install if it is missing
+
+            Args:
+                start_time (datetime): The start time of the high price window.
+                end_time (datetime): The end time of the high price window.
+                mode (str): The mode of operation for the heat pump during the high price window.
+            Raises:
+                Error: If the method is not implemented by the subclass.
+            """
+            ## round to full minutes
+            start_time = start_time.replace(second=0, microsecond=0)
+            end_time = end_time.replace(second=0, microsecond=0)
+
+            # Adjust start and end times for time zone of heatpump 
+            tz_name = self.heat_pump.installation_timezone
+            start_time = utils.adjust_times_for_timezone(start_time,tz_name)
+            end_time = utils.adjust_times_for_timezone(end_time,tz_name)
+            
+            duration = end_time - start_time
+            logger.info(f'[ThermiaHeatpump] Planning for high price window starting at {start_time}, duration: {duration}')
+            
+            # Check if a strategy already exists for the given start time
+            if start_time in self.high_price_strategies:
+                existing_strategy = self.high_price_strategies[start_time]
+                logger.info(f'[ThermiaHeatpump] High price handling strategy already exists for start time {start_time}: {existing_strategy}')
+                return
+            
+
+            
+            schedule = self.install_schedule_in_heatpump(self, start_time, end_time, mode)
+            high_price_strategy = HighPriceHandlingStrategy(start_time, end_time, schedule)
+            logger.info(f'[ThermiaHeatpump] Created high price handling strategy: {high_price_strategy}')
+
+            self.high_price_strategies[start_time] = high_price_strategy
+            logger.info(f'[ThermiaHeatpump] Stored high price handling strategy for start time {start_time}')
+
+    def install_schedule_in_heatpump(self, start_time, end_time, mode: str):
+        """
+        Installs a schedule in the heat pump based on the provided start time, end time, and mode.
+
+        Args:
+            start_time (datetime): The start time for the schedule.
+            end_time (datetime): The end time for the schedule.
+            mode (str): The mode for the schedule. Can be one of the following:
+                - "E": EVU mode
+                - "B": Hot water block
+                - "R": Reduced heating effect
+                - "H": Increased heating effect
+
+        Returns:
+            Schedule: The newly created schedule.
+
+        Raises:
+            ValueError: If an unknown mode is provided.
+        """
+        if mode == "E":
+            planned_schedule = Schedule(start=start_time, end=end_time, functionId=CAL_FUNCTION_EVU_MODE)
+            schedule = self.heat_pump.add_new_schedule(planned_schedule)
+            return schedule
+        elif mode == "B":
+            planned_schedule = Schedule(start=start_time, end=end_time, functionId=CAL_FUNCTION_HOT_WATER_BLOCK)
+            schedule = self.heat_pump.add_new_schedule(planned_schedule)
+            return schedule
+        elif mode == "R":
+            planned_schedule = Schedule(start=start_time, end=end_time, functionId=CAL_FUNCTION_REDUCED_HEATING_EFFECT, value=self.reduced_heat_temperature)
+            schedule = self.heat_pump.add_new_schedule(planned_schedule)
+            return schedule
+        elif mode == "H":
+            planned_schedule = Schedule(start=start_time, end=end_time, functionId=CAL_FUNCTION_REDUCED_HEATING_EFFECT, value=self.increased_heat_temperature)
+            schedule = self.heat_pump.add_new_schedule(planned_schedule)
+            return schedule
+        else:
+            logger.error(f'[ThermiaHeatpump] Unknown mode: {mode}')
+            raise ValueError(f'Unknown mode: {mode}')    
 
  #   def api_set_max_grid_charge_rate(self, max_grid_charge_rate: int):
  #       if max_grid_charge_rate < 0:
