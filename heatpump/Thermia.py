@@ -37,11 +37,40 @@ class ThermiaHeatpump(HeatpumpBaseclass):
     high_price_strategies: dict[datetime, HighPriceHandlingStrategy] = {}
 
 
-    def __init__(self, user, password) -> None:
-        super().__init__()
-        self.user = user
-        self.password = password
+    ## config for the strategy
+    # Set the maximum number of hours and the maximum duration for each mode
+    # The strategy is to set the heat pump to the most energy saving mode in time slots 
+    # with the highest price first, but having a maximum number of hours and a maximum duration for each mode
+    # and having a min trigger price for each mode
+    ### EVU Block
+    min_price_for_evu_block=0.6
+    max_evu_block_hours = 14
+    max_evu_block_duration = 6
+    ### Hot Water Block
+    min_price_for_hot_water_block=0.4
+    max_hot_water_block_hours = 10
+    max_hot_water_block_duration = 4
+    ### Reduced Heat
+    min_price_for_reduced_heat = 0.3
+    max_reduced_heat_hours = 14
+    max_reduced_heat_duration = 6
+    reduced_heat_temperature = 18
+    ### Increased Heat
+    max_price_for_increased_heat = 0.2
+    min_energy_surplus_for_increased_heat = 500  
+    max_increased_heat_hours = 14
+    max_increased_heat_duration = 6
+    increased_heat_temperature = 22
+    max_increased_heat_outdoor_temperature = 15
+    ### Hot Water Boost
+    min_energy_surplus_for_hot_water_boost = 2500  
+    max_hot_water_boost_hours = 1
+    
 
+    def __init__(self, config:dict) -> None:
+        super().__init__()
+        self.user = config['user']
+        self.password = config['password']
         self.ensure_connection()
 
     def ensure_connection(self):
@@ -195,35 +224,6 @@ class ThermiaHeatpump(HeatpumpBaseclass):
             # Sort hours by highest prices descending
             sorted_hours_by_price = sorted(range(max_hour), key=lambda h: prices[h], reverse=True)
 
-            ## config for the strategy
-            # Set the maximum number of hours and the maximum duration for each mode
-            # The strategy is to set the heat pump to the most energy saving mode in time slots 
-            # with the highest price first, but having a maximum number of hours and a maximum duration for each mode
-            # and having a min trigger price for each mode
-            ### EVU Block
-            min_price_for_evu_block=0.6
-            max_evu_block_hours = 14
-            max_evu_block_duration = 6
-            ### Hot Water Block
-            min_price_for_hot_water_block=0.4
-            max_hot_water_block_hours = 10
-            max_hot_water_block_duration = 4
-            ### Reduced Heat
-            min_price_for_reduced_heat = 0.3
-            max_reduced_heat_hours = 14
-            max_reduced_heat_duration = 6
-            reduced_heat_temperature = 18
-            ### Increased Heat
-            max_price_for_increased_heat = 0.2
-            min_energy_surplus_for_increased_heat = 500  
-            max_increased_heat_hours = 14
-            max_increased_heat_duration = 6
-            increased_heat_temperature = 22
-            max_increased_heat_outdoor_temperature = 15
-            ### Hot Water Boost
-            max_price_for_hot_water_boost = 0.1
-            min_energy_surplus_for_hot_water_boost = 2500  
-            max_hot_water_boost_hours = 1
 
 
             ### counters for this evaluation
