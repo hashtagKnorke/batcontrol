@@ -2,6 +2,7 @@
 # The base class is used to define the interface for the heatpump implementation. 
 from datetime import datetime
 import mqtt_api
+import numpy as np
 
 """ Parent Class for implementing Heatpumps and test drivers"""
 
