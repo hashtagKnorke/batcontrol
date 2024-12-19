@@ -113,7 +113,7 @@ class Batcontrol(object):
             DELAY_EVALUATION_BY_SECONDS
         )
 
-        self.heatpump = Heatpump.Heatpump(config['heatpump']) 
+        self.heatpump = Heatpump.Heatpump(config['heatpump'], timezone) 
 
 
         self.inverter = inverter.Inverter(config['inverter'])
