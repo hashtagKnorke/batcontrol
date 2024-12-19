@@ -1,6 +1,8 @@
 import inspect
 import logging
 
+import numpy as np
+
 from ThermiaOnlineAPI.const import CAL_FUNCTION_EVU_MODE
 from ThermiaOnlineAPI.model.HeatPump import ThermiaHeatPump
 from ThermiaOnlineAPI.model.Schedule import Schedule
