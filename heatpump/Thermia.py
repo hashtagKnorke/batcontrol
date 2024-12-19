@@ -9,7 +9,7 @@ from ThermiaOnlineAPI.model.HeatPump import ThermiaHeatPump
 from ThermiaOnlineAPI.model.Schedule import Schedule
 import mqtt_api
 from .baseclass import HeatpumpBaseclass
-from typing import Optional
+from typing import Optional, Dict
 
 
 from ThermiaOnlineAPI import Thermia 
@@ -67,11 +67,12 @@ class ThermiaHeatpump(HeatpumpBaseclass):
     max_hot_water_boost_hours = 1
     
 
-    def __init__(self, config:dict) -> None:
+    def __init__(self, config:dict, timezone: pytz.timezone ) -> None:
         super().__init__()
         self.user = config['user']
         self.password = config['password']
         self.ensure_connection()
+        self.timezone = timezone    
         
         ## fetch strategy params from config
         ### EVU Block
