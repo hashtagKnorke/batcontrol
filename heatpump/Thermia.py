@@ -336,7 +336,7 @@ class ThermiaHeatpump(HeatpumpBaseclass):
         logger.debug(f'[BatCTRL:HP] Apply Mode {mode} from +{start_index}h to +{end_index}h')   
 
         hours_until_range_start = datetime.timedelta(hours=start_index)
-        range_duration = datetime.timedelta(hours=end_index-start_index) +1 # add one hour to include the druartion of evenan single 1-hour slot
+        range_duration = datetime.timedelta(hours=end_index-start_index+1)  # add one hour to include the druartion of evenan single 1-hour slot
 
         curr_hour_start = datetime.datetime.now().replace(minute=0, second=0, microsecond=0)
         range_start_time = curr_hour_start+hours_until_range_start
