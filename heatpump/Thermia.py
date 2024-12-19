@@ -72,7 +72,41 @@ class ThermiaHeatpump(HeatpumpBaseclass):
         self.user = config['user']
         self.password = config['password']
         self.ensure_connection()
+        
+        ## fetch strategy params from config
+        ### EVU Block
+        self.min_price_for_evu_block = self.fetch_param_from_config(config, "min_price_for_evu_block", 0.6)
+        self.max_evu_block_hours = self.fetch_param_from_config(config, "max_evu_block_hours", 14)
+        self.max_evu_block_duration = self.fetch_param_from_config(config, "max_evu_block_duration", 6)
+        ### Hot Water Block
+        self.min_price_for_hot_water_block = self.fetch_param_from_config(config, "min_price_for_hot_water_block", 0.4)
+        self.max_hot_water_block_hours = self.fetch_param_from_config(config, "max_hot_water_block_hours", 10)
+        self.max_hot_water_block_duration = self.fetch_param_from_config(config, "max_hot_water_block_duration", 4)
+        ### Reduced Heat
+        self.min_price_for_reduced_heat = self.fetch_param_from_config(config, "min_price_for_reduced_heat", 0.3)
+        self.max_reduced_heat_hours = self.fetch_param_from_config(config, "max_reduced_heat_hours", 14)
+        self.max_reduced_heat_duration = self.fetch_param_from_config(config, "max_reduced_heat_duration", 6)
+        self.reduced_heat_temperature = self.fetch_param_from_config(config, "reduced_heat_temperature", 18)
+        ### Increased Heat
+        self.max_price_for_increased_heat = self.fetch_param_from_config(config, "max_price_for_increased_heat", 0.2)
+        self.min_energy_surplus_for_increased_heat = self.fetch_param_from_config(config, "min_energy_surplus_for_increased_heat", 500)
+        self.max_increased_heat_hours = self.fetch_param_from_config(config, "max_increased_heat_hours", 14)
+        self.max_increased_heat_duration = self.fetch_param_from_config(config, "max_increased_heat_duration", 6)
+        self.increased_heat_temperature = self.fetch_param_from_config(config, "increased_heat_temperature", 22)
+        self.max_increased_heat_outdoor_temperature = self.fetch_param_from_config(config, "max_increased_heat_outdoor_temperature", 15)
+        ### Hot Water Boost
+        self.min_energy_surplus_for_hot_water_boost = self.fetch_param_from_config(config, "min_energy_surplus_for_hot_water_boost", 2500)
+        self.max_hot_water_boost_hours = self.fetch_param_from_config(config, "max_hot_water_boost_hours", 1)
 
+
+    def fetch_param_from_config(self, config: dict, name: str , default: float) -> float:
+        if name in config:
+            logger.debug(f"[Heatpump] fetching {name} from config: {config[name]}")
+            return config[name]
+        else:
+            logger.debug(f"[Heatpump] using default for config {name}  default: {default}")
+            return default
+       
     def ensure_connection(self):
         if not self.heat_pump:
             try:
