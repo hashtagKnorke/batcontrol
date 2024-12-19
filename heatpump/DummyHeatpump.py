@@ -15,7 +15,7 @@ class DummyHeatpump(HeatpumpBaseclass):
     def refresh_api_values(self):
         logger.info("[DummyHeatpump] Refreshing API values")
 
-    def _plan_for_high_price_window(self, start_time, end_time):
+    def ensure_strategy_for_time_window(self, start_time, end_time):
         logger.info(f"[DummyHeatpump] Planning for high price window from {start_time} to {end_time}")
 
     def set_heatpump_parameters(self, net_consumption, prices):

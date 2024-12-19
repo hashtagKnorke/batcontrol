@@ -19,7 +19,7 @@ class SilentHeatpump(HeatpumpBaseclass):
     def refresh_api_values(self):
         pass
 
-    def _plan_for_high_price_window(self, start_time, end_time):
+    def ensure_strategy_for_time_window(self, start_time, end_time):
         pass
 
     def set_heatpump_parameters(self, net_consumption, prices):

@@ -46,7 +46,7 @@ class HeatpumpBaseclass(object):
         """
         return 'heatpumps/0/'
     
-    def _plan_for_high_price_window(self, start_time: datetime, end_time: datetime):
+    def ensure_strategy_for_time_window(self, start_time: datetime, end_time: datetime):
         """
         Plan for high price window.
 
