@@ -21,7 +21,7 @@ class Heatpump(object):
         else:
             if config['type'].lower() == 'thermia':
                 from .Thermia import ThermiaHeatpump
-                return ThermiaHeatpump(config['user'], config['password'])
+                return ThermiaHeatpump(config)
             elif config['type'].lower() == 'dummy':
                 from .DummyHeatpump import DummyHeatpump
                 return DummyHeatpump()
