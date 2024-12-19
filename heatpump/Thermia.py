@@ -1,5 +1,6 @@
 import inspect
 import logging
+import datetime
 
 import numpy as np
 
@@ -14,7 +15,6 @@ from typing import Optional
 from ThermiaOnlineAPI import Thermia 
 from ThermiaOnlineAPI.utils import utils
 from typing import List, Tuple
-from datetime import datetime
 import pytz
 
 class HighPriceHandlingStrategy:
