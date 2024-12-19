@@ -59,3 +59,18 @@ class HeatpumpBaseclass(object):
             Error: If the method is not implemented by the subclass.
         """
         raise RuntimeError("[Heatpump Base Class] Function '_plan_for_high_price_window' not implemented")
+    
+    def set_heatpump_parameters(self, net_consumption: np.ndarray, prices: dict):
+        """
+        Set the parameters for the heat pump based on net energy consumption and energy prices.
+        Parameters:
+        -----------
+        net_consumption : np.ndarray
+            An array representing the net energy consumption for each hour.
+        prices : dict
+            A dictionary where keys are hours and values are the corresponding energy prices.
+        Returns:
+        --------
+        None
+        """
+        raise RuntimeError("[Heatpump Base Class] Function 'set_heatpump_parameters' not implemented")
