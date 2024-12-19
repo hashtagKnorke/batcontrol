@@ -16,8 +16,8 @@ from inverter import inverter
 from logfilelimiter import logfilelimiter
 from heatpump import Heatpump
 
-# Add the subdirectory to the Python path
-sys.path.append(os.path.join(os.path.dirname(__file__), 'thermia_online_api'))
+## Add the subdirectory to the Python path
+#sys.path.append(os.path.join(os.path.dirname(__file__), 'thermia_online_api'))
 
 
 LOGFILE = "batcontrol.log"
