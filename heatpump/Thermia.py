@@ -542,6 +542,18 @@ class ThermiaHeatpump(HeatpumpBaseclass):
             if handler.end_time < now:
                 logger.info(f'[ThermiaHeatpump] Cleaning up high price handler for start time {start_time} and end time {handler.end_time}')
                 del self.high_price_handlers[start_time]
+
+    def __del__(self):
+        """
+        Destructor to clean up high price handlers and delete corresponding schedules in the Thermia API.
+        """
+        if self.heat_pump:
+            for start_time, handler in self.high_price_handlers.items():
+                try:
+                    self.heat_pump.delete_schedule(handler.schedule)
+                    logger.info(f'[ThermiaHeatpump Destructor] Deleted schedule for high price handler starting at {start_time}')
+                except Exception as e:
+                    logger.error(f'[ThermiaHeatpump Destructor] Failed to delete schedule for high price handler starting at {start_time}: {e}')
  #   def api_set_max_grid_charge_rate(self, max_grid_charge_rate: int):
  #       if max_grid_charge_rate < 0:
  #           logger.warning(
