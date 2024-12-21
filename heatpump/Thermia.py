@@ -545,10 +545,12 @@ class ThermiaHeatpump(HeatpumpBaseclass):
         """
         Remove all high price strategies that are no longer valid.
         """
-        now = datetime.datetime.now(self.heatpump_timezone)  # Make 'now' an aware datetime object in UTC
+        now = datetime.datetime.now(self.heatpump_timezone)  # Make 'now' an aware datetime object in the heat pump's timezone
         strategies_to_remove = []
 
         for start_time, strategy in self.high_price_strategies.items():
+            if start_time.tzinfo is None:
+                start_time = self.heatpump_timezone.localize(start_time)  # Make 'start_time' an aware datetime object
             if start_time < now:
                 strategies_to_remove.append(start_time)
 
@@ -562,11 +564,14 @@ class ThermiaHeatpump(HeatpumpBaseclass):
         """
         Remove all high price handlers that are no longer valid.
         """
-        now = datetime.datetime.now(self.heatpump_timezone)  # Make 'now' an aware datetime object in UTC
+        now = datetime.datetime.now(self.heatpump_timezone)  # Make 'now' an aware datetime object in the heat pump's timezone
         handlers_to_remove = []
 
         for start_time, handler in self.high_price_handlers.items():
-            if handler.end_time < now:
+            end_time = handler.end_time
+            if end_time.tzinfo is None:
+                end_time = self.heatpump_timezone.localize(handler.end_time)  # Make 'end_time' an aware datetime object
+            if end_time < now:
                 handlers_to_remove.append(start_time)
 
         for start_time in handlers_to_remove:
