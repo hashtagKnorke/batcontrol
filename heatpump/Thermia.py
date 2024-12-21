@@ -468,7 +468,7 @@ class ThermiaHeatpump(HeatpumpBaseclass):
              
 
             
-            schedule = self.install_schedule_in_heatpump(self, start_time, end_time, mode)
+            schedule = self.install_schedule_in_heatpump(start_time, end_time, mode)
             high_price_strategy = ThermiaHighPriceHandling(start_time, end_time, schedule)
             logger.info(f'[ThermiaHeatpump] Created high price handling strategy: {high_price_strategy}')
 
@@ -476,7 +476,7 @@ class ThermiaHeatpump(HeatpumpBaseclass):
             logger.info(f'[ThermiaHeatpump] Stored high price handling strategy for start time {start_time}')
             self.cleanupHighPriceHandlers()
 
-    def install_schedule_in_heatpump(self, start_time, end_time, mode: str):
+    def install_schedule_in_heatpump(self, start_time: datetime, end_time: datetime, mode: str):
         """
         Installs a schedule in the heat pump based on the provided start time, end time, and mode.
 
