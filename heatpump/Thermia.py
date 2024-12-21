@@ -204,7 +204,7 @@ class ThermiaHeatpump(HeatpumpBaseclass):
                 self.mqtt_client.generic_publish(config_topic_prefix + 'min_energy_surplus_for_hot_water_boost', self.min_energy_surplus_for_hot_water_boost)
                 self.mqtt_client.generic_publish(config_topic_prefix + 'max_hot_water_boost_hours', self.max_hot_water_boost_hours)
 
-                logger.debug(f'[Heatpump] config values published to MQTT topic {self._get_mqtt_topic() + "config/max_hot_water_boost_hours"} ...')
+                logger.debug(f'[Heatpump] config values published to MQTT  ...')
 
                 # Publish all strategy values with strategy/ prefix
                 strategy_topic_prefix = self._get_mqtt_topic() + 'strategy/'
