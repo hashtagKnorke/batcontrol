@@ -536,24 +536,44 @@ class ThermiaHeatpump(HeatpumpBaseclass):
             logger.error(f'[ThermiaHeatpump] Unknown mode: {mode}')
             raise ValueError(f'Unknown mode: {mode}')    
    
+        import datetime
+    import pytz
+    
+  
+    
     def cleanupHighPriceStrategies(self):
         """
         Remove all high price strategies that are no longer valid.
         """
-        now = datetime.datetime.now()
+        now = datetime.datetime.now(pytz.utc)  # Make 'now' an aware datetime object in UTC
+        strategies_to_remove = []
+
         for start_time, strategy in self.high_price_strategies.items():
             if start_time < now:
-                del self.high_price_strategies[start_time]
-    
+                strategies_to_remove.append(start_time)
+
+        for start_time in strategies_to_remove:
+            del self.high_price_strategies[start_time]
+            logger.debug(f'[ThermiaHeatpump] Removed high price strategy for {start_time}')
+
+        logger.debug(f'[ThermiaHeatpump] Cleanup complete. Remaining strategies: {len(self.high_price_strategies)}')
+
     def cleanupHighPriceHandlers(self):
         """
         Remove all high price handlers that are no longer valid.
         """
-        now = datetime.datetime.now()
+        now = datetime.datetime.now(pytz.utc)  # Make 'now' an aware datetime object in UTC
+        handlers_to_remove = []
+
         for start_time, handler in self.high_price_handlers.items():
             if handler.end_time < now:
-                logger.info(f'[ThermiaHeatpump] Cleaning up high price handler for start time {start_time} and end time {handler.end_time}')
-                del self.high_price_handlers[start_time]
+                handlers_to_remove.append(start_time)
+
+        for start_time in handlers_to_remove:
+            del self.high_price_handlers[start_time]
+            logger.debug(f'[ThermiaHeatpump] Removed high price handler for {start_time}')
+
+        logger.debug(f'[ThermiaHeatpump] Cleanup complete. Remaining handlers: {len(self.high_price_handlers)}')
 
     def __del__(self):
         """
