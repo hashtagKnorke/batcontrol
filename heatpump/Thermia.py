@@ -125,10 +125,10 @@ class ThermiaHeatpump(HeatpumpBaseclass):
 
     def fetch_param_from_config(self, config: dict, name: str , default: float) -> float:
         if name in config:
-            logger.debug(f"[Heatpump] fetching {name} from config: {config[name]}")
+            logger.debug(f"[Heatpump] fetching {name} from config: {config[name]}")
             return config[name]
         else:
-            logger.debug(f"[Heatpump] using default for config {name}  default: {default}")
+            logger.debug(f"[Heatpump] using default for config {name}  default: {default}")
             return default
        
     def ensure_connection(self):
@@ -176,7 +176,6 @@ class ThermiaHeatpump(HeatpumpBaseclass):
                 self.mqtt_api.generic_publish(
                     self._get_mqtt_topic() + 'xx_supply_line_temperature', self.heat_pump.supply_line_temperature)
                 for name, value in self._get_all_properties(self.heat_pump):
-                    logger.debug(f"[Heatpump]   publish {name}: {value}")
                     # Ensure the value is a supported type
                     if not isinstance(value, (str, bytearray, int, float, type(None))):
                         value = str(value)
@@ -224,10 +223,17 @@ class ThermiaHeatpump(HeatpumpBaseclass):
                 
                 ## publish all strategy values with strategy/ prefix
 
-                for start_time, strategy in self.high_price_handlers.items():
+                self.mqtt_api.delete_all(self._get_mqtt_topic() + 'handler/high_price_handlers/')
+
+                for start_time, handler in self.high_price_handlers.items():
                     self.mqtt_api.generic_publish(
-                        self._get_mqtt_topic() + 'strategy/high_price_strategies/'+start_time.strftime("%Y-%m-%d_%H-%M"), strategy.schedule.functionId)
-                    
+                        self._get_mqtt_topic() + 'handler/high_price_handlers/'+start_time.strftime("%Y-%m-%d_%H-%M"), handler.schedule.functionId)
+
+                self.mqtt_api.delete_all(self._get_mqtt_topic() + 'strategy/high_price_strategies/')
+
+                for start_time, strategy in self.high_price_strategies.items(): 
+                    self.mqtt_api.generic_publish(
+                        self._get_mqtt_topic() + 'strategy/high_price_strategies/'+start_time.strftime("%Y-%m-%d_%H-%M"), strategy.mode)   
             except Exception as e:
                 logger.error(f"Failed to refresh API values: {e}")
         
