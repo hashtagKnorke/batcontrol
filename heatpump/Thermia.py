@@ -113,7 +113,7 @@ class ThermiaHeatpump(HeatpumpBaseclass):
         self.reduced_heat_temperature = self.fetch_param_from_config(config, "reduced_heat_temperature", 20)
         ### Increased Heat
         self.max_price_for_increased_heat = self.fetch_param_from_config(config, "max_price_for_increased_heat", 0.2)
-        self.min_energy_surplus_for_increased_heat = self.fetch_param_from_config(config, "min_energy_surplus_for_increased_heat", 500)
+        self.min_energy_surplus_for_increased_heat = self.fetch_param_from_config(config, "min_energy_surplus_for_increased_heat", 1000)
         self.max_increased_heat_hours = self.fetch_param_from_config(config, "max_increased_heat_hours", 14)
         self.max_increased_heat_duration = self.fetch_param_from_config(config, "max_increased_heat_duration", 6)
         self.increased_heat_temperature = self.fetch_param_from_config(config, "increased_heat_temperature", 22)
@@ -184,6 +184,9 @@ class ThermiaHeatpump(HeatpumpBaseclass):
                     )
                 logger.debug(f'[Heatpump] API values refreshed')
                 ## publish all config values with config/ prefix
+                # create subfolder config/
+                self.mqtt_api.generic_publish(
+                    self._get_mqtt_topic() + 'config/', '')
                 self.mqtt_api.generic_publish(
                     self._get_mqtt_topic() + 'config/min_price_for_evu_block', self.min_price_for_evu_block)
                 self.mqtt_api.generic_publish(
@@ -221,6 +224,8 @@ class ThermiaHeatpump(HeatpumpBaseclass):
                 self.mqtt_api.generic_publish(
                     self._get_mqtt_topic() + 'config/max_hot_water_boost_hours', self.max_hot_water_boost_hours)
                 
+                logger.debug(f'[Heatpump] config values published to MQTT topic {self._get_mqtt_topic() + 'config/max_hot_water_boost_hours'} ...')
+                
                 ## publish all strategy values with strategy/ prefix
 
                 self.mqtt_api.delete_all(self._get_mqtt_topic() + 'handler/high_price_handlers/')
@@ -234,6 +239,8 @@ class ThermiaHeatpump(HeatpumpBaseclass):
                 for start_time, strategy in self.high_price_strategies.items(): 
                     self.mqtt_api.generic_publish(
                         self._get_mqtt_topic() + 'strategy/high_price_strategies/'+start_time.strftime("%Y-%m-%d_%H-%M"), strategy.mode)   
+
+                logger.debug(f'[Heatpump] strategy values ({len(self.high_price_handlers)} handlers, {len(self.high_price_strategies)} strategies) published to MQTT')
             except Exception as e:
                 logger.error(f"Failed to refresh API values: {e}")
         
@@ -312,11 +319,14 @@ class ThermiaHeatpump(HeatpumpBaseclass):
                     if self.heat_pump.outdoor_temperature < self.max_increased_heat_outdoor_temperature:
                         heat_modes[h] = "H"
                         remaining_increased_heat_hours -= 1
-                        logger.debug(f'[BatCTRL:HP] Set Increased Heat at +{h}h due to high surplus {net_consumption[h]} and low outdoor temperature {self.heat_pump.outdoor_temperature}')
+                        if prices[h] <= self.max_price_for_increased_heat:
+                            logger.debug(f'[BatCTRL:HP] Set Increased Heat at +{h}h due to low price {prices[h]} and low outdoor temperature {self.heat_pump.outdoor_temperature}')
+                        else:
+                            logger.debug(f'[BatCTRL:HP] Set Increased Heat at +{h}h due to high surplus {net_consumption[h]} and low outdoor temperature {self.heat_pump.outdoor_temperature}')
                     else:
                         heat_modes[h] = "N"
                         logger.debug(f'[BatCTRL:HP] Set Normal Heat at +{h}h due to high surplus {net_consumption[h]} and high outdoor temperature {self.heat_pump.outdoor_temperature}')
-                if prices[h] >= self.min_price_for_evu_block and remaining_evu_block_hours > 0:
+                elif prices[h] >= self.min_price_for_evu_block and remaining_evu_block_hours > 0:
                     heat_modes[h] = "E"
                     remaining_evu_block_hours -= 1
                     logger.debug(f'[BatCTRL:HP] Set EVU Block at +{h}h due to high price {prices[h]}')
