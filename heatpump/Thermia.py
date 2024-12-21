@@ -17,7 +17,7 @@ from ThermiaOnlineAPI.utils import utils
 from typing import List, Tuple
 import pytz
 
-class HighPriceHandlingStrategy:
+class ThermiaHighPriceHandling:
             def __init__(self, start_time: datetime, end_time: datetime, schedule: Schedule):
                 self.start_time = start_time
                 self.end_time = end_time
@@ -26,6 +26,20 @@ class HighPriceHandlingStrategy:
             def __repr__(self):
                 return f"HighPriceHandlingStrategy(schedule={self.schedule})"
 
+class ThermiaStrategySlot:   
+    def __init__(self, start_time: datetime, end_time: datetime, mode: str):
+        self.start_time = start_time
+        self.end_time = end_time
+        self.mode = mode
+
+    def setHandling(self, handler: ThermiaHighPriceHandling):
+        self.handler = handler
+
+    def __repr__(self):
+        if hasattr(self, 'handler'):
+            return f"STRATEGY({self.start_time}-{self.end_time}:[{self.mode}]->{self.handler.schedule})"
+        else:
+            return f"STRATEGY({self.start_time}-{self.end_time}:[{self.mode}])"
 
 logger = logging.getLogger('__main__')
 logger.info(f'[Heatpump] loading module ')
@@ -34,7 +48,16 @@ logger.info(f'[Heatpump] loading module ')
 class ThermiaHeatpump(HeatpumpBaseclass):
     heat_pump: ThermiaHeatPump = None
     mqtt_api: Optional['mqtt_api.MqttApi'] = None
-    high_price_strategies: dict[datetime, HighPriceHandlingStrategy] = {}
+    
+    ## store all high price handlers to avoid duplicates and to be able to remove them
+    high_price_handlers: dict[datetime, ThermiaHighPriceHandling] = {}
+
+    ## max time that has already been planned, to avoid double planning
+    already_planned_until = datetime.datetime.now().replace(minute=0, second=0, microsecond=0)
+    
+    ## store all strategies to be able to refer to them later
+    high_price_strategies: dict[datetime, ThermiaStrategySlot] = {}
+
 
 
     ## config for the strategy
@@ -201,7 +224,7 @@ class ThermiaHeatpump(HeatpumpBaseclass):
                 
                 ## publish all strategy values with strategy/ prefix
 
-                for start_time, strategy in self.high_price_strategies.items():
+                for start_time, strategy in self.high_price_handlers.items():
                     self.mqtt_api.generic_publish(
                         self._get_mqtt_topic() + 'strategy/high_price_strategies/'+start_time.strftime("%Y-%m-%d_%H-%M"), strategy.schedule.functionId)
                     
@@ -241,20 +264,21 @@ class ThermiaHeatpump(HeatpumpBaseclass):
         # ensure availability of data
         max_hour = min(len(net_consumption), len(prices))
 
-        assumed_hourly_heatpump_energy_demand = 500 # watthour
-        assumed_hotwater_reheat_energy_demand = 1500 # watthour
-        assumed_hotwater_boost_energy_demand = 1500 # watthour
+        duration = datetime.timedelta(hours=max_hour)  # add one hour to include the druartion of evenan single 1-hour slot
 
-        if self.heat_pump is not None:
-            modes: list = [
-            "H",  # Heat increased temperature
-            "N",  # Heat normal
-            "R",  # Heat reduced temperature
-            "B",  # Hot water block
-            "E",  # EVU Block
-            "W",  # Hot water boost
-            ]
-            # set heatpump parameters
+        curr_hour_start = datetime.datetime.now().replace(minute=0, second=0, microsecond=0)
+        
+        max_timestamp = curr_hour_start+duration
+        if self.heat_pump is not None and max_timestamp > self.already_planned_until:
+            logger.debug(f'[BatCTRL:HP] Planning until {max_timestamp}')
+
+            ## TODO: either full replan with purge of all strategies or just add new strategies and limit evaluation to new hours 
+
+            assumed_hourly_heatpump_energy_demand = 500 # watthour
+            assumed_hotwater_reheat_energy_demand = 1500 # watthour
+            assumed_hotwater_boost_energy_demand = 1500 # watthour
+
+            
             heat_modes = ["N"] * max_hour
 
 
@@ -301,7 +325,7 @@ class ThermiaHeatpump(HeatpumpBaseclass):
                 else:
                     heat_modes[h] = "N"
                     logger.debug(f'[BatCTRL:HP] Set Normal Heat at +{h}h due to price {prices[h]}')
-           
+        
             # Evaluate the duration of each mode and downgrade to lower mode if necessary
             self.adjust_mode_duration(heat_modes, prices,  "E", "B", self.max_evu_block_duration)
             self.adjust_mode_duration(heat_modes, prices,  "B", "R", self.max_hot_water_block_duration) 
@@ -323,6 +347,23 @@ class ThermiaHeatpump(HeatpumpBaseclass):
 
             # Handle the last range
             self.applyMode(current_mode, start_index, max_hour)
+
+            for i in range(max_hour):
+                hours_until_range_start = datetime.timedelta(hours=i)
+                range_duration = datetime.timedelta(hours=i+1)  # add one hour to include the druartion of evenan single 1-hour slot
+
+                curr_hour_start = datetime.datetime.now().replace(minute=0, second=0, microsecond=0)
+                start_time = curr_hour_start+hours_until_range_start
+                end_time = start_time+range_duration
+                
+                self.high_price_strategies[start_time] = ThermiaHighPriceHandling(start_time, end_time, heat_modes[i])
+            
+            self.cleanupHighPriceStrategies();
+
+            self.already_planned_until = max_timestamp
+            
+        else:
+            logger.debug(f'[BatCTRL:HP] No replanning necessary, already planned until {self.already_planned_until}')
         return
     
     def adjust_mode_duration(self, heat_modes, prices, inspected_mode, downgrade_mode, max_mode_duration):
@@ -381,21 +422,9 @@ class ThermiaHeatpump(HeatpumpBaseclass):
         range_end_time = range_start_time+range_duration
         
         
-        start_str = range_start_time.astimezone(self.timezone).strftime("%H:%M")
-        end_str = range_end_time.astimezone(self.timezone).strftime("%H:%M")
-        if mode == "N":
-            logger.debug(f'[BatCTRL:HP] Set Heatpump to NORMAL Heating from {start_str} to {end_str}') 
-        elif mode == "R":
-            logger.debug(f'[BatCTRL:HP] Set Heatpump to REDUCED Heating from {start_str} to {end_str}') 
-        elif mode == "B":
-            logger.debug(f'[BatCTRL:HP] Set Heatpump to Hot water BLOCK from {start_str} to {end_str}') 
-        elif mode == "E":
-            logger.debug(f'[BatCTRL:HP] Set Heatpump to EVU block from {start_str} to {end_str}') 
-            self.ensure_strategy_for_time_window(range_start_time, range_end_time)
-        else:
-            logger.error(f'[BatCTRL:HP] Unknown heatpump mode: {mode}')
-            raise ValueError(f'Unknown heatpump mode: {mode}')
+        self.ensure_strategy_for_time_window(range_start_time, range_end_time, mode)
         
+
     def ensure_strategy_for_time_window(self, start_time: datetime, end_time: datetime, mode: str):
             """
             check whether strategy for certain
@@ -408,9 +437,9 @@ class ThermiaHeatpump(HeatpumpBaseclass):
             Raises:
                 Error: If the method is not implemented by the subclass.
             """
-            ## round to full minutes
-            start_time = start_time.replace(second=0, microsecond=0)
-            end_time = end_time.replace(second=0, microsecond=0)
+            ## round to full hour
+            start_time = start_time.replace(minute=0, second=0, microsecond=0)
+            end_time = end_time.replace(minute=0, second=0, microsecond=0)
 
             # Adjust start and end times for time zone of heatpump 
             tz_name = self.heat_pump.installation_timezone
@@ -421,19 +450,20 @@ class ThermiaHeatpump(HeatpumpBaseclass):
             logger.info(f'[ThermiaHeatpump] Planning for high price window starting at {start_time}, duration: {duration}')
             
             # Check if a strategy already exists for the given start time
-            if start_time in self.high_price_strategies:
-                existing_strategy = self.high_price_strategies[start_time]
+            if start_time in self.high_price_handlers:
+                existing_strategy = self.high_price_handlers[start_time]
                 logger.info(f'[ThermiaHeatpump] High price handling strategy already exists for start time {start_time}: {existing_strategy}')
                 return
-            
+             
 
             
             schedule = self.install_schedule_in_heatpump(self, start_time, end_time, mode)
-            high_price_strategy = HighPriceHandlingStrategy(start_time, end_time, schedule)
+            high_price_strategy = ThermiaHighPriceHandling(start_time, end_time, schedule)
             logger.info(f'[ThermiaHeatpump] Created high price handling strategy: {high_price_strategy}')
 
-            self.high_price_strategies[start_time] = high_price_strategy
+            self.high_price_handlers[start_time] = high_price_strategy
             logger.info(f'[ThermiaHeatpump] Stored high price handling strategy for start time {start_time}')
+            self.cleanupHighPriceHandlers()
 
     def install_schedule_in_heatpump(self, start_time, end_time, mode: str):
         """
@@ -454,26 +484,53 @@ class ThermiaHeatpump(HeatpumpBaseclass):
         Raises:
             ValueError: If an unknown mode is provided.
         """
+
+        start_str = start_time.astimezone(self.timezone).strftime("%H:%M")
+        end_str = end_time.astimezone(self.timezone).strftime("%H:%M")
+        
         if mode == "E":
             planned_schedule = Schedule(start=start_time, end=end_time, functionId=CAL_FUNCTION_EVU_MODE)
             schedule = self.heat_pump.add_new_schedule(planned_schedule)
+            logger.debug(f'[BatCTRL:HP] Set Heatpump to EVU block from {start_str} to {end_str}') 
             return schedule
         elif mode == "B":
             planned_schedule = Schedule(start=start_time, end=end_time, functionId=CAL_FUNCTION_HOT_WATER_BLOCK)
             schedule = self.heat_pump.add_new_schedule(planned_schedule)
+            logger.debug(f'[BatCTRL:HP] Set Heatpump to Hot water BLOCK from {start_str} to {end_str}') 
             return schedule
         elif mode == "R":
             planned_schedule = Schedule(start=start_time, end=end_time, functionId=CAL_FUNCTION_REDUCED_HEATING_EFFECT, value=self.reduced_heat_temperature)
             schedule = self.heat_pump.add_new_schedule(planned_schedule)
+            logger.debug(f'[BatCTRL:HP] Set Heatpump to REDUCED Heating ({self.increased_heat_temperature}) from {start_str} to {end_str}') 
             return schedule
         elif mode == "H":
             planned_schedule = Schedule(start=start_time, end=end_time, functionId=CAL_FUNCTION_REDUCED_HEATING_EFFECT, value=self.increased_heat_temperature)
             schedule = self.heat_pump.add_new_schedule(planned_schedule)
+            logger.debug(f'[BatCTRL:HP] Set Heatpump to INCREASED Heating ({self.increased_heat_temperature}) from {start_str} to {end_str}') 
             return schedule
         else:
             logger.error(f'[ThermiaHeatpump] Unknown mode: {mode}')
             raise ValueError(f'Unknown mode: {mode}')    
-
+   
+    def cleanupHighPriceStrategies(self):
+        """
+        Remove all high price strategies that are no longer valid.
+        """
+        now = datetime.datetime.now()
+        for start_time, strategy in self.high_price_handlers.items():
+            if start_time < now:
+                logger.info(f'[ThermiaHeatpump] Cleaning up high price strategy for start time {start_time}')
+                del self.remove_high_price_strategy[start_time]
+    
+    def cleanupHighPriceHandlers(self):
+        """
+        Remove all high price handlers that are no longer valid.
+        """
+        now = datetime.datetime.now()
+        for start_time, handler in self.high_price_handlers.items():
+            if handler.end_time < now:
+                logger.info(f'[ThermiaHeatpump] Cleaning up high price handler for start time {start_time} and end time {handler.end_time}')
+                del self.high_price_handlers[start_time]
  #   def api_set_max_grid_charge_rate(self, max_grid_charge_rate: int):
  #       if max_grid_charge_rate < 0:
  #           logger.warning(
