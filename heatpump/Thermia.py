@@ -554,11 +554,4 @@ class ThermiaHeatpump(HeatpumpBaseclass):
                     logger.info(f'[ThermiaHeatpump Destructor] Deleted schedule for high price handler starting at {start_time}')
                 except Exception as e:
                     logger.error(f'[ThermiaHeatpump Destructor] Failed to delete schedule for high price handler starting at {start_time}: {e}')
- #   def api_set_max_grid_charge_rate(self, max_grid_charge_rate: int):
- #       if max_grid_charge_rate < 0:
- #           logger.warning(
- #               f'[Heatpump] API: Invalid max_grid_charge_rate {max_grid_charge_rate}')
- #           return
- #       logger.info(
- #           f'[Heatpump] API: Setting max_grid_charge_rate: {max_grid_charge_rate}W')
- #       self.max_grid_charge_rate = max_grid_charge_rate
+
