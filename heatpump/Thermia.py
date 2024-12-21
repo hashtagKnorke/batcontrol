@@ -106,7 +106,7 @@ class ThermiaHeatpump(HeatpumpBaseclass):
         self.password = config['password']
         self.ensure_connection()
         self.already_planned_until = datetime.datetime.now().replace(minute=0, second=0, microsecond=0)
-        self.timezone = timezone    
+        self.heatpump_timezone = timezone    
         
         ## fetch strategy params from config
         ### EVU Block
@@ -503,8 +503,8 @@ class ThermiaHeatpump(HeatpumpBaseclass):
             ValueError: If an unknown mode is provided.
         """
 
-        start_str = start_time.astimezone(self.timezone).strftime("%H:%M")
-        end_str = end_time.astimezone(self.timezone).strftime("%H:%M")
+        start_str = start_time.astimezone(self.heatpump_timezone).strftime("%H:%M")
+        end_str = end_time.astimezone(self.heatpump_timezone).strftime("%H:%M")
         
         if mode == "E":
             planned_schedule = Schedule(start=start_time, end=end_time, functionId=CAL_FUNCTION_EVU_MODE)
@@ -545,7 +545,7 @@ class ThermiaHeatpump(HeatpumpBaseclass):
         """
         Remove all high price strategies that are no longer valid.
         """
-        now = datetime.datetime.now(pytz.utc)  # Make 'now' an aware datetime object in UTC
+        now = datetime.datetime.now(self.heatpump_timezone)  # Make 'now' an aware datetime object in UTC
         strategies_to_remove = []
 
         for start_time, strategy in self.high_price_strategies.items():
@@ -562,7 +562,7 @@ class ThermiaHeatpump(HeatpumpBaseclass):
         """
         Remove all high price handlers that are no longer valid.
         """
-        now = datetime.datetime.now(pytz.utc)  # Make 'now' an aware datetime object in UTC
+        now = datetime.datetime.now(self.heatpump_timezone)  # Make 'now' an aware datetime object in UTC
         handlers_to_remove = []
 
         for start_time, handler in self.high_price_handlers.items():
