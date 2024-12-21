@@ -7,7 +7,7 @@ import numpy as np
 from ThermiaOnlineAPI.const import CAL_FUNCTION_EVU_MODE, CAL_FUNCTION_HOT_WATER_BLOCK, CAL_FUNCTION_REDUCED_HEATING_EFFECT
 from ThermiaOnlineAPI.model.HeatPump import ThermiaHeatPump
 from ThermiaOnlineAPI.model.Schedule import Schedule
-import mqtt_api
+from mqtt_api import MqttApi
 from .baseclass import HeatpumpBaseclass
 from typing import Optional, Dict
 
@@ -47,7 +47,7 @@ logger.info(f'[Heatpump] loading module ')
 
 class ThermiaHeatpump(HeatpumpBaseclass):
     heat_pump: ThermiaHeatPump = None
-    mqtt_api: Optional['mqtt_api.MqttApi'] = None
+    mqtt_api: MqttApi = None
     
     ## store all high price handlers to avoid duplicates and to be able to remove them
     high_price_handlers: dict[datetime, ThermiaHighPriceHandling] = {}
@@ -183,66 +183,61 @@ class ThermiaHeatpump(HeatpumpBaseclass):
                         self._get_mqtt_topic() + name, value
                     )
                 logger.debug(f'[Heatpump] API values refreshed')
-                ## publish all config values with config/ prefix
-                # create subfolder config/
-                self.mqtt_api.generic_publish(
-                    self._get_mqtt_topic() + 'config/', '')
-                self.mqtt_api.generic_publish(
-                    self._get_mqtt_topic() + 'config/min_price_for_evu_block', self.min_price_for_evu_block)
-                self.mqtt_api.generic_publish(
-                    self._get_mqtt_topic() + 'config/max_evu_block_hours', self.max_evu_block_hours)
-                self.mqtt_api.generic_publish(
-                    self._get_mqtt_topic() + 'config/max_evu_block_duration', self.max_evu_block_duration)
-                self.mqtt_api.generic_publish(
-                    self._get_mqtt_topic() + 'config/min_price_for_hot_water_block', self.min_price_for_hot_water_block)
-                self.mqtt_api.generic_publish(
-                    self._get_mqtt_topic() + 'config/max_hot_water_block_hours', self.max_hot_water_block_hours)
-                self.mqtt_api.generic_publish(
-                    self._get_mqtt_topic() + 'config/max_hot_water_block_duration', self.max_hot_water_block_duration)
-                self.mqtt_api.generic_publish(
-                    self._get_mqtt_topic() + 'config/min_price_for_reduced_heat', self.min_price_for_reduced_heat)
-                self.mqtt_api.generic_publish(
-                    self._get_mqtt_topic() + 'config/max_reduced_heat_hours', self.max_reduced_heat_hours)
-                self.mqtt_api.generic_publish(
-                    self._get_mqtt_topic() + 'config/max_reduced_heat_duration', self.max_reduced_heat_duration)
-                self.mqtt_api.generic_publish(
-                    self._get_mqtt_topic() + 'config/reduced_heat_temperature', self.reduced_heat_temperature)
-                self.mqtt_api.generic_publish(
-                    self._get_mqtt_topic() + 'config/max_price_for_increased_heat', self.max_price_for_increased_heat)
-                self.mqtt_api.generic_publish(
-                    self._get_mqtt_topic() + 'config/min_energy_surplus_for_increased_heat', self.min_energy_surplus_for_increased_heat)
-                self.mqtt_api.generic_publish(
-                    self._get_mqtt_topic() + 'config/max_increased_heat_hours', self.max_increased_heat_hours)
-                self.mqtt_api.generic_publish(
-                    self._get_mqtt_topic() + 'config/max_increased_heat_duration', self.max_increased_heat_duration)
-                self.mqtt_api.generic_publish(
-                    self._get_mqtt_topic() + 'config/increased_heat_temperature', self.increased_heat_temperature)
-                self.mqtt_api.generic_publish(
-                    self._get_mqtt_topic() + 'config/max_increased_heat_outdoor_temperature', self.max_increased_heat_outdoor_temperature)
-                self.mqtt_api.generic_publish(
-                    self._get_mqtt_topic() + 'config/min_energy_surplus_for_hot_water_boost', self.min_energy_surplus_for_hot_water_boost)
-                self.mqtt_api.generic_publish(
-                    self._get_mqtt_topic() + 'config/max_hot_water_boost_hours', self.max_hot_water_boost_hours)
-                
-                logger.debug(f'[Heatpump] config values published to MQTT topic {self._get_mqtt_topic() + 'config/max_hot_water_boost_hours'} ...')
-                
-                ## publish all strategy values with strategy/ prefix
 
-                self.mqtt_api.delete_all(self._get_mqtt_topic() + 'handler/high_price_handlers/')
+                # Publish all config values with config/ prefix
+                config_topic_prefix = self._get_mqtt_topic() + 'config/'
+                self.mqtt_api.generic_publish(config_topic_prefix + 'min_price_for_evu_block', self.min_price_for_evu_block)
+                self.mqtt_api.generic_publish(config_topic_prefix + 'max_evu_block_hours', self.max_evu_block_hours)
+                self.mqtt_api.generic_publish(config_topic_prefix + 'max_evu_block_duration', self.max_evu_block_duration)
+                self.mqtt_api.generic_publish(config_topic_prefix + 'min_price_for_hot_water_block', self.min_price_for_hot_water_block)
+                self.mqtt_api.generic_publish(config_topic_prefix + 'max_hot_water_block_hours', self.max_hot_water_block_hours)
+                self.mqtt_api.generic_publish(config_topic_prefix + 'max_hot_water_block_duration', self.max_hot_water_block_duration)
+                self.mqtt_api.generic_publish(config_topic_prefix + 'min_price_for_reduced_heat', self.min_price_for_reduced_heat)
+                self.mqtt_api.generic_publish(config_topic_prefix + 'max_reduced_heat_hours', self.max_reduced_heat_hours)
+                self.mqtt_api.generic_publish(config_topic_prefix + 'reduced_heat_temperature', self.reduced_heat_temperature)
+                self.mqtt_api.generic_publish(config_topic_prefix + 'max_price_for_increased_heat', self.max_price_for_increased_heat)
+                self.mqtt_api.generic_publish(config_topic_prefix + 'min_energy_surplus_for_increased_heat', self.min_energy_surplus_for_increased_heat)
+                self.mqtt_api.generic_publish(config_topic_prefix + 'max_increased_heat_hours', self.max_increased_heat_hours)
+                self.mqtt_api.generic_publish(config_topic_prefix + 'max_increased_heat_duration', self.max_increased_heat_duration)
+                self.mqtt_api.generic_publish(config_topic_prefix + 'increased_heat_temperature', self.increased_heat_temperature)
+                self.mqtt_api.generic_publish(config_topic_prefix + 'max_increased_heat_outdoor_temperature', self.max_increased_heat_outdoor_temperature)
+                self.mqtt_api.generic_publish(config_topic_prefix + 'min_energy_surplus_for_hot_water_boost', self.min_energy_surplus_for_hot_water_boost)
+                self.mqtt_api.generic_publish(config_topic_prefix + 'max_hot_water_boost_hours', self.max_hot_water_boost_hours)
+
+                logger.debug(f'[Heatpump] config values published to MQTT topic {self._get_mqtt_topic() + "config/max_hot_water_boost_hours"} ...')
+
+                # Publish all strategy values with strategy/ prefix
+                strategy_topic_prefix = self._get_mqtt_topic() + 'strategy/'
+
+                # Delete all existing high price handlers
+                self.delete_all_mqtt_topics(self._get_mqtt_topic() + 'handler/high_price_handlers/')
 
                 for start_time, handler in self.high_price_handlers.items():
                     self.mqtt_api.generic_publish(
-                        self._get_mqtt_topic() + 'handler/high_price_handlers/'+start_time.strftime("%Y-%m-%d_%H-%M"), handler.schedule.functionId)
+                        self._get_mqtt_topic() + 'handler/high_price_handlers/' + start_time.strftime("%Y-%m-%d_%H-%M"), handler.schedule.functionId)
 
-                self.mqtt_api.delete_all(self._get_mqtt_topic() + 'strategy/high_price_strategies/')
+                # Delete all existing high price strategies
+                self.delete_all_mqtt_topics(self._get_mqtt_topic() + 'strategy/high_price_strategies/')
 
-                for start_time, strategy in self.high_price_strategies.items(): 
+                for start_time, strategy in self.high_price_strategies.items():
                     self.mqtt_api.generic_publish(
-                        self._get_mqtt_topic() + 'strategy/high_price_strategies/'+start_time.strftime("%Y-%m-%d_%H-%M"), strategy.mode)   
+                        self._get_mqtt_topic() + 'strategy/high_price_strategies/' + start_time.strftime("%Y-%m-%d_%H-%M"), strategy.mode)
 
                 logger.debug(f'[Heatpump] strategy values ({len(self.high_price_handlers)} handlers, {len(self.high_price_strategies)} strategies) published to MQTT')
+
             except Exception as e:
-                logger.error(f"Failed to refresh API values: {e}")
+                logger.error(f'[Heatpump] Failed to refresh API values: {e}')
+
+    def delete_all_mqtt_topics(self, topic_prefix: str):
+        """
+        Delete all MQTT topics with the given prefix by publishing an empty retained message.
+        
+        :param topic_prefix: The prefix of the topics to delete
+        """
+        # Assuming self.mqtt_api has a method to list all topics with a given prefix
+        #topics_to_delete = self.mqtt_api.list_topics_with_prefix(topic_prefix)
+        #for topic in topics_to_delete:
+        #    self.mqtt_api.generic_publish(topic, '', retain=True)
         
             
     def _get_all_properties(self, obj):
