@@ -466,22 +466,21 @@ class ThermiaHeatpump(HeatpumpBaseclass):
             end_time = utils.adjust_times_for_timezone(end_time,tz_name)
             
             duration = end_time - start_time
-            logger.info(f'[ThermiaHeatpump] Planning for high price window starting at {start_time}, duration: {duration}')
+            logger.info(f'[ThermiaHeatpump] Planning Strategy [{mode}] starting at {start_time}, duration: {duration}')
             
             # Check if a strategy already exists for the given start time
             if start_time in self.high_price_handlers:
                 existing_strategy = self.high_price_handlers[start_time]
-                logger.info(f'[ThermiaHeatpump] High price handling strategy already exists for start time {start_time}: {existing_strategy}')
+                logger.info(f'[ThermiaHeatpump] price handler already exists for start time {start_time}: {existing_strategy}')
                 return
              
 
             
             schedule = self.install_schedule_in_heatpump(start_time, end_time, mode)
-            high_price_strategy = ThermiaHighPriceHandling(start_time, end_time, schedule)
-            logger.info(f'[ThermiaHeatpump] Created high price handling strategy: {high_price_strategy}')
-
-            self.high_price_handlers[start_time] = high_price_strategy
-            logger.info(f'[ThermiaHeatpump] Stored high price handling strategy for start time {start_time}')
+            if schedule:
+                high_price_strategy = ThermiaHighPriceHandling(start_time, end_time, schedule)
+                logger.info(f'[ThermiaHeatpump] Created high price handler: {high_price_strategy}')
+                self.high_price_handlers[start_time] = high_price_strategy
             self.cleanupHighPriceHandlers()
 
     def install_schedule_in_heatpump(self, start_time: datetime, end_time: datetime, mode: str):
@@ -527,6 +526,12 @@ class ThermiaHeatpump(HeatpumpBaseclass):
             schedule = self.heat_pump.add_new_schedule(planned_schedule)
             logger.debug(f'[BatCTRL:HP] Set Heatpump to INCREASED Heating ({self.increased_heat_temperature}) from {start_str} to {end_str}') 
             return schedule
+        elif mode == "W":
+            logger.debug(f'[BatCTRL:HP] TODO No impl for  Heatpump to Hot Water BOOST from {start_str} to {end_str}') 
+            return 
+        elif mode == "N":
+            logger.debug(f'[BatCTRL:HP] No change in Heatpump mode from {start_str} to {end_str}') 
+            return
         else:
             logger.error(f'[ThermiaHeatpump] Unknown mode: {mode}')
             raise ValueError(f'Unknown mode: {mode}')    
