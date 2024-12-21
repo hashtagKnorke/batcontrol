@@ -214,14 +214,14 @@ class ThermiaHeatpump(HeatpumpBaseclass):
 
                 for start_time, handler in self.high_price_handlers.items():
                     self.mqtt_api.generic_publish(
-                        self._get_mqtt_topic() + 'handler/high_price_handlers/' + start_time.strftime("%Y-%m-%d_%H-%M"), handler.schedule.functionId)
+                        self._get_mqtt_topic() + 'handler/high_price_handlers/' + start_time.strftime("%Y-%m-%d_%H:%M"), handler.schedule.functionId)
 
                 # Delete all existing high price strategies
                 self.delete_all_mqtt_topics(self._get_mqtt_topic() + 'strategy/high_price_strategies/')
 
                 for start_time, strategy in self.high_price_strategies.items():
                     self.mqtt_api.generic_publish(
-                        self._get_mqtt_topic() + 'strategy/high_price_strategies/' + start_time.strftime("%Y-%m-%d_%H-%M"), strategy.mode)
+                        self._get_mqtt_topic() + 'strategy/high_price_strategies/' + start_time.strftime("%Y-%m-%d_%H:%M"), strategy.mode)
 
                 logger.debug(f'[Heatpump] strategy values ({len(self.high_price_handlers)} handlers, {len(self.high_price_strategies)} strategies) published to MQTT')
 
