@@ -182,6 +182,7 @@ class Batcontrol(object):
     def __del__(self):
         try:
             del self.inverter
+            del self.heatpump
         except:
             pass
 
