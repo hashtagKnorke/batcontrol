@@ -545,20 +545,21 @@ class ThermiaHeatpump(HeatpumpBaseclass):
         """
         Remove all high price strategies that are no longer valid.
         """
+        logger.debug(f'[ThermiaHeatpump] Cleaning up high price strategies, currently {len(self.high_price_strategies)} strategies')
         now = datetime.datetime.now(self.batcontrol_timezone)  # Make 'now' an aware datetime object in the heat pump's timezone
         now= utils.adjust_times_for_timezone(now,self.heat_pump.installation_timezone)       
 
         strategies_to_remove = []
 
         for start_time, strategy in self.high_price_strategies.items():
-            if start_time.tzinfo is None:
-                start_time = self.batcontrol_timezone.localize(start_time)  # Make 'start_time' an aware datetime object
             if start_time < now:
+                logger.debug(f'[ThermiaHeatpump] Removing high price strategy for {start_time}, because it before now: {now})')
                 strategies_to_remove.append(start_time)
 
         for start_time in strategies_to_remove:
             del self.high_price_strategies[start_time]
             logger.debug(f'[ThermiaHeatpump] Removed high price strategy for {start_time}')
+            ## todo delete from mqtt
 
         logger.debug(f'[ThermiaHeatpump] Cleanup complete. Remaining strategies: {len(self.high_price_strategies)}')
 
@@ -566,20 +567,21 @@ class ThermiaHeatpump(HeatpumpBaseclass):
         """
         Remove all high price handlers that are no longer valid.
         """
+        logger.debug(f'[ThermiaHeatpump] Cleaning up high price handlers, currently {len(self.high_price_handlers)} handlers')
         now = datetime.datetime.now(self.batcontrol_timezone)  # Make 'now' an aware datetime object in the heat pump's timezone
         now= utils.adjust_times_for_timezone(now,self.heat_pump.installation_timezone)       
         handlers_to_remove = []
 
         for start_time, handler in self.high_price_handlers.items():
             end_time = handler.end_time
-            if end_time.tzinfo is None:
-                end_time = self.batcontrol_timezone.localize(handler.end_time)  # Make 'end_time' an aware datetime object
             if end_time < now:
+                logger.debug(f'[ThermiaHeatpump] Removing high price handler for {start_time}-{end_time} , because it ends before now: {now})')
                 handlers_to_remove.append(start_time)
 
         for start_time in handlers_to_remove:
             del self.high_price_handlers[start_time]
             logger.debug(f'[ThermiaHeatpump] Removed high price handler for {start_time}')
+            #### todo delete from mqtt
 
         logger.debug(f'[ThermiaHeatpump] Cleanup complete. Remaining handlers: {len(self.high_price_handlers)}')
 
