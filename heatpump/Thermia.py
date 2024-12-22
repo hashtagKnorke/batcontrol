@@ -106,7 +106,7 @@ class ThermiaHeatpump(HeatpumpBaseclass):
         self.password = config['password']
         self.ensure_connection()
         self.already_planned_until = datetime.datetime.now().replace(minute=0, second=0, microsecond=0)
-        self.heatpump_timezone = timezone    
+        self.batcontrol_timezone = timezone    
         
         ## fetch strategy params from config
         ### EVU Block
@@ -503,8 +503,8 @@ class ThermiaHeatpump(HeatpumpBaseclass):
             ValueError: If an unknown mode is provided.
         """
 
-        start_str = start_time.astimezone(self.heatpump_timezone).strftime("%H:%M")
-        end_str = end_time.astimezone(self.heatpump_timezone).strftime("%H:%M")
+        start_str = start_time.astimezone(self.batcontrol_timezone).strftime("%H:%M")
+        end_str = end_time.astimezone(self.batcontrol_timezone).strftime("%H:%M")
         
         if mode == "E":
             planned_schedule = Schedule(start=start_time, end=end_time, functionId=CAL_FUNCTION_EVU_MODE)
@@ -545,14 +545,14 @@ class ThermiaHeatpump(HeatpumpBaseclass):
         """
         Remove all high price strategies that are no longer valid.
         """
-        now = datetime.datetime.now(self.heatpump_timezone)  # Make 'now' an aware datetime object in the heat pump's timezone
-        now= utils.adjust_times_for_timezone(now,self.heatpump_timezone)       
+        now = datetime.datetime.now(self.batcontrol_timezone)  # Make 'now' an aware datetime object in the heat pump's timezone
+        now= utils.adjust_times_for_timezone(now,self.heat_pump.installation_timezone)       
 
         strategies_to_remove = []
 
         for start_time, strategy in self.high_price_strategies.items():
             if start_time.tzinfo is None:
-                start_time = self.heatpump_timezone.localize(start_time)  # Make 'start_time' an aware datetime object
+                start_time = self.batcontrol_timezone.localize(start_time)  # Make 'start_time' an aware datetime object
             if start_time < now:
                 strategies_to_remove.append(start_time)
 
@@ -566,14 +566,14 @@ class ThermiaHeatpump(HeatpumpBaseclass):
         """
         Remove all high price handlers that are no longer valid.
         """
-        now = datetime.datetime.now(self.heatpump_timezone)  # Make 'now' an aware datetime object in the heat pump's timezone
-        now= utils.adjust_times_for_timezone(now,self.heatpump_timezone)       
+        now = datetime.datetime.now(self.batcontrol_timezone)  # Make 'now' an aware datetime object in the heat pump's timezone
+        now= utils.adjust_times_for_timezone(now,self.heat_pump.installation_timezone)       
         handlers_to_remove = []
 
         for start_time, handler in self.high_price_handlers.items():
             end_time = handler.end_time
             if end_time.tzinfo is None:
-                end_time = self.heatpump_timezone.localize(handler.end_time)  # Make 'end_time' an aware datetime object
+                end_time = self.batcontrol_timezone.localize(handler.end_time)  # Make 'end_time' an aware datetime object
             if end_time < now:
                 handlers_to_remove.append(start_time)
 
