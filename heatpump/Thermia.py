@@ -107,7 +107,7 @@ class ThermiaHeatpump(HeatpumpBaseclass):
         self.user = config['user']
         self.password = config['password']
         self.ensure_connection()
-        self.already_planned_until = datetime.datetime.now().replace(minute=0, second=0, microsecond=0)
+        self.already_planned_until = datetime.datetime.now().astimezone(self.batcontrol_timezone).replace(minute=0, second=0, microsecond=0)
         self.batcontrol_timezone = timezone    
         
         ## fetch strategy params from config
@@ -294,7 +294,7 @@ class ThermiaHeatpump(HeatpumpBaseclass):
 
         duration = datetime.timedelta(hours=max_hour)  # add one hour to include the druartion of evenan single 1-hour slot
 
-        curr_hour_start = datetime.datetime.now().replace(minute=0, second=0, microsecond=0)
+        curr_hour_start = datetime.datetime.now().astimezone(self.batcontrol_timezone).replace(minute=0, second=0, microsecond=0)
         
         max_timestamp = curr_hour_start+duration
         if self.heat_pump is not None and max_timestamp > self.already_planned_until:
@@ -369,21 +369,22 @@ class ThermiaHeatpump(HeatpumpBaseclass):
             start_index = 0
             current_mode = heat_modes[0]
 
+#-------- here we start to convert indices into timestamps
+
             for i in range(1, max_hour):
                 if heat_modes[i] != current_mode:
                     # Handle the range from start_index to i-1
-                    self.applyMode(current_mode, start_index, i)
+                    self.applyMode(current_mode, start_index, i-1)
                     start_index = i
                     current_mode = heat_modes[i]
-
             # Handle the last range
             self.applyMode(current_mode, start_index, max_hour)
 
             for i in range(max_hour):
                 hours_until_range_start = datetime.timedelta(hours=i)
-                range_duration = datetime.timedelta(hours=i+1)  # add one hour to include the duration of evenan single 1-hour slot
+                range_duration = datetime.timedelta(hours=1)  # add one hour to include the duration of evenan single 1-hour slot
 
-                curr_hour_start = datetime.datetime.now().replace(minute=0, second=0, microsecond=0)
+                curr_hour_start = datetime.datetime.now().astimezone(self.batcontrol_timezone).replace(minute=0, second=0, microsecond=0)
                 start_time = curr_hour_start+hours_until_range_start
                 end_time = start_time+range_duration
                 
@@ -448,7 +449,7 @@ class ThermiaHeatpump(HeatpumpBaseclass):
         hours_until_range_start = datetime.timedelta(hours=start_index)
         range_duration = datetime.timedelta(hours=end_index-start_index+1)  # add one hour to include the druartion of evenan single 1-hour slot
 
-        curr_hour_start = datetime.datetime.now().replace(minute=0, second=0, microsecond=0)
+        curr_hour_start = datetime.datetime.now().astimezone(self.batcontrol_timezone).replace(minute=0, second=0, microsecond=0)
         range_start_time = curr_hour_start+hours_until_range_start
         range_end_time = range_start_time+range_duration
         
