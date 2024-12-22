@@ -27,10 +27,12 @@ class ThermiaHighPriceHandling:
                 return f"HighPriceHandlingStrategy(schedule={self.schedule})"
 
 class ThermiaStrategySlot:   
-    def __init__(self, start_time: datetime.datetime, end_time: datetime.datetime, mode: str):
+    def __init__(self, start_time: datetime.datetime, end_time: datetime.datetime, mode: str, price: float, consumption: float):
         self.start_time = start_time
         self.end_time = end_time
         self.mode = mode
+        self.price = price
+        self.consumption = consumption
 
     def setHandling(self, handler: ThermiaHighPriceHandling):
         self.handler = handler
@@ -228,8 +230,17 @@ class ThermiaHeatpump(HeatpumpBaseclass):
                 self.delete_all_mqtt_topics(self._get_mqtt_topic() + 'strategy/high_price_strategies/')
 
                 for start_time, strategy in self.high_price_strategies.items():
+                    high_price_strategy_topic = self._get_mqtt_topic() + 'strategy/high_price_strategies/' + start_time.strftime("%Y-%m-%d_%H:%M")
                     self.mqtt_client.generic_publish(
-                        self._get_mqtt_topic() + 'strategy/high_price_strategies/' + start_time.strftime("%Y-%m-%d_%H:%M"), strategy.mode)
+                        high_price_strategy_topic, strategy.mode)
+                    self.mqtt_client.generic_publish(high_price_strategy_topic + '/price', strategy.price)
+                    self.mqtt_client.generic_publish(high_price_strategy_topic + '/consumption', strategy.consumption)  
+                    self.mqtt_client.generic_publish(high_price_strategy_topic + '/mode', strategy.mode)
+                    self.mqtt_client.generic_publish(high_price_strategy_topic + '/start_time', strategy.start_time.strftime("%Y-%m-%d %H:%M")) 
+                    self.mqtt_client.generic_publish(high_price_strategy_topic + '/end_time', strategy.end_time.strftime("%Y-%m-%d %H:%M")) 
+                    if strategy.handler:
+                        self.mqtt_client.generic_publish(high_price_strategy_topic + '/handler', strategy.handler.schedule.functionId)  
+
 
                 logger.debug(f'[Heatpump] strategy values ({len(self.high_price_handlers)} handlers, {len(self.high_price_strategies)} strategies) published to MQTT')
 
@@ -375,7 +386,7 @@ class ThermiaHeatpump(HeatpumpBaseclass):
                 start_time = curr_hour_start+hours_until_range_start
                 end_time = start_time+range_duration
                 
-                self.high_price_strategies[start_time] = ThermiaStrategySlot(start_time, end_time, heat_modes[i])
+                self.high_price_strategies[start_time] = ThermiaStrategySlot(start_time, end_time, heat_modes[i],prices[i],net_consumption[i])
             
             self.cleanupHighPriceStrategies();
 
