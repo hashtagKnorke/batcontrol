@@ -237,8 +237,9 @@ class ThermiaHeatpump(HeatpumpBaseclass):
                     self.mqtt_client.generic_publish(high_price_strategy_topic + '/consumption', strategy.consumption)  
                     self.mqtt_client.generic_publish(high_price_strategy_topic + '/mode', strategy.mode)
                     self.mqtt_client.generic_publish(high_price_strategy_topic + '/start_time', strategy.start_time.strftime("%Y-%m-%d %H:%M")) 
+                    self.mqtt_client.generic_publish(high_price_strategy_topic + '/start_time_stamp', strategy.start_time.timestamp())
                     self.mqtt_client.generic_publish(high_price_strategy_topic + '/end_time', strategy.end_time.strftime("%Y-%m-%d %H:%M")) 
-                    if strategy.handler:
+                    if hasattr(strategy, 'handler'):
                         self.mqtt_client.generic_publish(high_price_strategy_topic + '/handler', strategy.handler.schedule.functionId)  
 
 
