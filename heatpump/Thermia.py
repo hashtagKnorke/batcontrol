@@ -18,7 +18,7 @@ from typing import List, Tuple
 import pytz
 
 class ThermiaHighPriceHandling:
-            def __init__(self, start_time: datetime, end_time: datetime, schedule: Schedule):
+            def __init__(self, start_time: datetime.datetime, end_time: datetime.datetime, schedule: Schedule):
                 self.start_time = start_time
                 self.end_time = end_time
                 self.schedule = schedule
@@ -27,7 +27,7 @@ class ThermiaHighPriceHandling:
                 return f"HighPriceHandlingStrategy(schedule={self.schedule})"
 
 class ThermiaStrategySlot:   
-    def __init__(self, start_time: datetime, end_time: datetime, mode: str):
+    def __init__(self, start_time: datetime.datetime, end_time: datetime.datetime, mode: str):
         self.start_time = start_time
         self.end_time = end_time
         self.mode = mode
@@ -50,13 +50,13 @@ class ThermiaHeatpump(HeatpumpBaseclass):
     mqtt_client: Optional[MQTT_API] = None
     
     ## store all high price handlers to avoid duplicates and to be able to remove them
-    high_price_handlers: dict[datetime, ThermiaHighPriceHandling] = {}
+    high_price_handlers: dict[datetime.datetime, ThermiaHighPriceHandling] = {}
 
     ## max time that has already been planned, to avoid double planning
     already_planned_until: datetime
     
     ## store all strategies to be able to refer to them later
-    high_price_strategies: dict[datetime, ThermiaStrategySlot] = {}
+    high_price_strategies: dict[datetime.datetime, ThermiaStrategySlot] = {}
 
 
 
@@ -534,11 +534,7 @@ class ThermiaHeatpump(HeatpumpBaseclass):
             return
         else:
             logger.error(f'[ThermiaHeatpump] Unknown mode: {mode}')
-            raise ValueError(f'Unknown mode: {mode}')    
-   
-        import datetime
-    import pytz
-    
+            raise ValueError(f'Unknown mode: {mode}')       
   
     
     def cleanupHighPriceStrategies(self):
@@ -552,7 +548,7 @@ class ThermiaHeatpump(HeatpumpBaseclass):
         strategies_to_remove = []
 
         for start_time, strategy in self.high_price_strategies.items():
-            if start_time < now:
+            if start_time.timestamp() < now.timestamp():
                 logger.debug(f'[ThermiaHeatpump] Removing high price strategy for {start_time}, because it before now: {now})')
                 strategies_to_remove.append(start_time)
 
@@ -574,7 +570,7 @@ class ThermiaHeatpump(HeatpumpBaseclass):
 
         for start_time, handler in self.high_price_handlers.items():
             end_time = handler.end_time
-            if end_time < now:
+            if end_time.timestamp() < now.timestamp():
                 logger.debug(f'[ThermiaHeatpump] Removing high price handler for {start_time}-{end_time} , because it ends before now: {now})')
                 handlers_to_remove.append(start_time)
 
