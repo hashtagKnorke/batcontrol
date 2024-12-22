@@ -107,8 +107,8 @@ class ThermiaHeatpump(HeatpumpBaseclass):
         self.user = config['user']
         self.password = config['password']
         self.ensure_connection()
-        self.already_planned_until = datetime.datetime.now().astimezone(self.batcontrol_timezone).replace(minute=0, second=0, microsecond=0)
         self.batcontrol_timezone = timezone    
+        self.already_planned_until = datetime.datetime.now().astimezone(self.batcontrol_timezone).replace(minute=0, second=0, microsecond=0)
         
         ## fetch strategy params from config
         ### EVU Block
