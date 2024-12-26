@@ -328,58 +328,6 @@ class ThermiaHeatpump(HeatpumpBaseclass):
 
                 logger.debug(f"[Heatpump] config values published to MQTT  ...")
 
-                # Delete all existing high price handlers
-                handlers_prefix = self._get_mqtt_topic() + "handlers/"
-                MQTT_API.delete_all_topics(handlers_prefix)
-
-                for start_time, handler in self.high_price_handlers.items():
-                    self.mqtt_client.generic_publish(
-                        handlers_prefix + start_time.strftime("%Y-%m-%d_%H:%M"),
-                        handler.schedule.functionId,
-                    )
-
-                # Delete all existing high price strategies
-                strategies_prefix = self._get_mqtt_topic() + "strategies/"
-                self.delete_all_mqtt_topics(strategies_prefix)
-
-                for start_time, strategy in self.high_price_strategies.items():
-                    high_price_strategy_topic = strategies_prefix + start_time.strftime(
-                        "%Y-%m-%d_%H:%M"
-                    )
-                    self.mqtt_client.generic_publish(
-                        high_price_strategy_topic, strategy.mode
-                    )
-                    self.mqtt_client.generic_publish(
-                        high_price_strategy_topic + "/price", strategy.price
-                    )
-                    self.mqtt_client.generic_publish(
-                        high_price_strategy_topic + "/consumption", strategy.consumption
-                    )
-                    self.mqtt_client.generic_publish(
-                        high_price_strategy_topic + "/mode", strategy.mode
-                    )
-                    self.mqtt_client.generic_publish(
-                        high_price_strategy_topic + "/start_time",
-                        strategy.start_time.strftime("%Y-%m-%d %H:%M"),
-                    )
-                    self.mqtt_client.generic_publish(
-                        high_price_strategy_topic + "/start_time_stamp",
-                        strategy.start_time.timestamp(),
-                    )
-                    self.mqtt_client.generic_publish(
-                        high_price_strategy_topic + "/end_time",
-                        strategy.end_time.strftime("%Y-%m-%d %H:%M"),
-                    )
-                    if hasattr(strategy, "handler"):
-                        self.mqtt_client.generic_publish(
-                            high_price_strategy_topic + "/handler",
-                            strategy.handler.schedule.functionId,
-                        )
-
-                logger.debug(
-                    f"[Heatpump] strategy values ({len(self.high_price_handlers)} handlers, {len(self.high_price_strategies)} strategies) published to MQTT"
-                )
-
             except Exception as e:
                 logger.error(f"[Heatpump] Failed to refresh API values: {e}")
 
@@ -578,6 +526,7 @@ class ThermiaHeatpump(HeatpumpBaseclass):
             self.cleanupHighPriceStrategies()
 
             self.already_planned_until = max_timestamp
+            self.publish_strategies_to_mqtt()
 
         else:
             logger.debug(
@@ -848,6 +797,60 @@ class ThermiaHeatpump(HeatpumpBaseclass):
         logger.debug(
             f"[ThermiaHeatpump] Cleanup complete. Remaining handlers: {len(self.high_price_handlers)}"
         )
+
+    def publish_strategies_to_mqtt(self):
+        if self.mqtt_client:
+            # Delete all existing high price handlers
+            handlers_prefix = self._get_mqtt_topic() + "handlers/"
+            self.mqtt_client.delete_all_topics(handlers_prefix)
+
+            for start_time, handler in self.high_price_handlers.items():
+                self.mqtt_client.generic_publish(
+                    handlers_prefix + start_time.strftime("%Y-%m-%d_%H:%M"),
+                    handler.schedule.functionId,
+                )
+
+            # Delete all existing high price strategies
+            strategies_prefix = self._get_mqtt_topic() + "strategies/"
+            self.mqtt_client.delete_all_topics(strategies_prefix)
+
+            for start_time, strategy in self.high_price_strategies.items():
+                high_price_strategy_topic = strategies_prefix + start_time.strftime(
+                    "%Y-%m-%d_%H:%M"
+                )
+                self.mqtt_client.generic_publish(
+                    high_price_strategy_topic, strategy.mode
+                )
+                self.mqtt_client.generic_publish(
+                    high_price_strategy_topic + "/price", strategy.price
+                )
+                self.mqtt_client.generic_publish(
+                    high_price_strategy_topic + "/consumption", strategy.consumption
+                )
+                self.mqtt_client.generic_publish(
+                    high_price_strategy_topic + "/mode", strategy.mode
+                )
+                self.mqtt_client.generic_publish(
+                    high_price_strategy_topic + "/start_time",
+                    strategy.start_time.strftime("%Y-%m-%d %H:%M"),
+                )
+                self.mqtt_client.generic_publish(
+                    high_price_strategy_topic + "/start_time_stamp",
+                    strategy.start_time.timestamp(),
+                )
+                self.mqtt_client.generic_publish(
+                    high_price_strategy_topic + "/end_time",
+                    strategy.end_time.strftime("%Y-%m-%d %H:%M"),
+                )
+                if hasattr(strategy, "handler"):
+                    self.mqtt_client.generic_publish(
+                        high_price_strategy_topic + "/handler",
+                        strategy.handler.schedule.functionId,
+                    )
+
+            logger.debug(
+                f"[Heatpump] strategy values ({len(self.high_price_handlers)} handlers, {len(self.high_price_strategies)} strategies) published to MQTT"
+            )
 
     def __del__(self):
         """
