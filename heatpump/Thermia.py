@@ -328,31 +328,29 @@ class ThermiaHeatpump(HeatpumpBaseclass):
 
                 logger.debug(f"[Heatpump] config values published to MQTT  ...")
 
-                # Publish all strategy values with strategy/ prefix
-                strategy_topic_prefix = self._get_mqtt_topic() + "strategy/"
-
+            
                 # Delete all existing high price handlers
-                self.delete_all_mqtt_topics(
-                    self._get_mqtt_topic() + "handler/high_price_handlers/"
+                handlers_prefix = self._get_mqtt_topic() + "handlers/"
+                MQTT_API.delete_all_topics(
+                    handlers_prefix
                 )
 
                 for start_time, handler in self.high_price_handlers.items():
                     self.mqtt_client.generic_publish(
-                        self._get_mqtt_topic()
-                        + "handler/high_price_handlers/"
+                        handlers_prefix
                         + start_time.strftime("%Y-%m-%d_%H:%M"),
                         handler.schedule.functionId,
                     )
 
                 # Delete all existing high price strategies
+                strategies_prefix = self._get_mqtt_topic() + "strategies/"
                 self.delete_all_mqtt_topics(
-                    self._get_mqtt_topic() + "strategy/high_price_strategies/"
+                    strategies_prefix
                 )
 
                 for start_time, strategy in self.high_price_strategies.items():
                     high_price_strategy_topic = (
-                        self._get_mqtt_topic()
-                        + "strategy/high_price_strategies/"
+                        strategies_prefix
                         + start_time.strftime("%Y-%m-%d_%H:%M")
                     )
                     self.mqtt_client.generic_publish(
@@ -391,17 +389,6 @@ class ThermiaHeatpump(HeatpumpBaseclass):
 
             except Exception as e:
                 logger.error(f"[Heatpump] Failed to refresh API values: {e}")
-
-    def delete_all_mqtt_topics(self, topic_prefix: str):
-        """
-        Delete all MQTT topics with the given prefix by publishing an empty retained message.
-
-        :param topic_prefix: The prefix of the topics to delete
-        """
-        # Assuming self.mqtt_api has a method to list all topics with a given prefix
-        # topics_to_delete = self.mqtt_api.list_topics_with_prefix(topic_prefix)
-        # for topic in topics_to_delete:
-        #    self.mqtt_api.generic_publish(topic, '', retain=True)
 
     def _get_all_properties(self, obj):
         for name, method in inspect.getmembers(
@@ -451,7 +438,15 @@ class ThermiaHeatpump(HeatpumpBaseclass):
             logger.debug(f"[BatCTRL:HP] Planning until {max_timestamp}")
 
             ## TODO: either full replan with purge of all strategies or just add new strategies and limit evaluation to new hours
-
+            ## for now we do a full replan
+            self.high_price_strategies = {}
+            for start_time, handler in self.high_price_handlers.items():
+                self.heat_pump.delete_schedule(handler.schedule)
+                logger.debug(
+                    f"[BatCTRL:HP] Replan from scratch: Deleted High Price Handler {handler.schedule}"
+                )
+            self.high_price_handlers = {}
+        
             assumed_hourly_heatpump_energy_demand = 500  # watthour
             assumed_hotwater_reheat_energy_demand = 1500  # watthour
             assumed_hotwater_boost_energy_demand = 1500  # watthour
@@ -598,7 +593,7 @@ class ThermiaHeatpump(HeatpumpBaseclass):
         return
 
     def adjust_mode_duration(
-        self, heat_modes, prices, inspected_mode, downgrade_mode, max_mode_duration
+        self, heat_modes: list[str], prices: list[float], inspected_mode:str, downgrade_mode: str, max_mode_duration: int
     ):
         """
         Adjust the duration of a specific heat mode and downgrade it if it exceeds the maximum allowed duration.
@@ -647,7 +642,7 @@ class ThermiaHeatpump(HeatpumpBaseclass):
                 mode_duration = 0
                 start_index = -1
 
-    def applyMode(self, mode, start_index, end_index):
+    def applyMode(self, mode: str, start_index: int, end_index:int):
         logger.debug(
             f"[BatCTRL:HP] Apply Mode {mode} from +{start_index}h to +{end_index}h"
         )
@@ -810,9 +805,9 @@ class ThermiaHeatpump(HeatpumpBaseclass):
         strategies_to_remove = []
 
         for start_time, strategy in self.high_price_strategies.items():
-            if start_time.timestamp() < now.timestamp():
+            if strategy.end_time.timestamp() < now.timestamp():
                 logger.debug(
-                    f"[ThermiaHeatpump] Removing high price strategy for {start_time}, because it before now: {now})"
+                    f"[ThermiaHeatpump] Removing high price strategy at {start_time} - {strategy.end_time}, because it ends before now: {now})"
                 )
                 strategies_to_remove.append(start_time)
 
@@ -831,9 +826,6 @@ class ThermiaHeatpump(HeatpumpBaseclass):
         """
         Remove all high price handlers that are no longer valid.
         """
-        logger.debug(
-            f"[ThermiaHeatpump] Cleaning up high price handlers, currently {len(self.high_price_handlers)} handlers"
-        )
         now = datetime.datetime.now(
             self.batcontrol_timezone
         )  # Make 'now' an aware datetime object in the heat pump's timezone
