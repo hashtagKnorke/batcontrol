@@ -23,6 +23,31 @@ import pytz
 
 
 class ThermiaHighPriceHandling:
+    """
+    A class representing an applied setting to handle high price periods for the Thermia heat pump system.
+
+    Attributes:
+        start_time (datetime.datetime): The start time of the high price period.
+        end_time (datetime.datetime): The end time of the high price period.
+        schedule (CalendarSchedule): The schedule associated with the high price period.
+    """
+
+    def __init__(
+        self,
+        start_time: datetime.datetime,
+        end_time: datetime.datetime,
+        schedule: CalendarSchedule,
+    ):
+        """
+        Initializes the ThermiaHighPriceHandling class with the specified start time, end time, and schedule.
+
+        Args:
+            start_time (datetime.datetime): The start time of the high price period.
+            end_time (datetime.datetime): The end time of the high price period.
+            schedule (CalendarSchedule): The schedule associated with the high price period.
+        """
+        ...
+
     def __init__(
         self,
         start_time: datetime.datetime,
@@ -38,6 +63,28 @@ class ThermiaHighPriceHandling:
 
 
 class ThermiaStrategySlot:
+    """
+    A class to represent a strategy  decision for a certain time slot.
+
+    Attributes:
+    -----------
+    start_time : datetime.datetime
+        The start time of the strategy slot.
+    end_time : datetime.datetime
+        The end time of the strategy slot.
+    mode : str
+        The mode of operation during the strategy slot.
+    price : float
+        The price associated with the strategy slot.
+    consumption : float
+        The energy consumption during the strategy slot.
+
+    Methods:
+    --------
+    setHandling(handler: ThermiaHighPriceHandling):
+        Sets the handler for high price handling.
+    """
+
     def __init__(
         self,
         start_time: datetime.datetime,
@@ -46,6 +93,16 @@ class ThermiaStrategySlot:
         price: float,
         consumption: float,
     ):
+        """
+        Initialize a new instance of the Thermia class.
+
+        Args:
+            start_time (datetime.datetime): The start time of the heat pump operation.
+            end_time (datetime.datetime): The end time of the heat pump operation.
+            mode (str): The mode of operation for the heat pump.
+            price (float): The price of electricity during the operation period.
+            consumption (float): The energy consumption of the heat pump during the operation period.
+        """
         self.start_time = start_time
         self.end_time = end_time
         self.mode = mode
@@ -53,6 +110,12 @@ class ThermiaStrategySlot:
         self.consumption = consumption
 
     def setHandling(self, handler: ThermiaHighPriceHandling):
+        """
+        Sets the handler for high price handling.
+
+        Args:
+            handler (ThermiaHighPriceHandling): An instance of ThermiaHighPriceHandling that defines how to handle high price situations.
+        """
         self.handler = handler
 
     def __repr__(self):
@@ -67,6 +130,87 @@ logger.info(f"[Heatpump] loading module ")
 
 
 class ThermiaHeatpump(HeatpumpBaseclass):
+    """
+    ThermiaHeatpump class for managing and controlling a Thermia heat pump.
+
+    This class provides methods to initialize the heat pump, fetch configuration parameters,
+    ensure connection to the heat pump, activate MQTT, refresh API values, set heat pump parameters,
+    adjust mode duration, apply modes, ensure strategies for time windows, install schedules in the heat pump,
+    clean up high price strategies and handlers, and publish strategies to MQTT.
+
+    Attributes:
+    heat_pump : Optional[ThermiaHeatPump]
+        Instance of the Thermia heat pump.
+    mqtt_client : Optional[MQTT_API]
+        MQTT client for publishing internal values.
+    high_price_handlers : dict[datetime.datetime, ThermiaHighPriceHandling]
+        Dictionary to store high price handlers to avoid duplicates and enable removal.
+    already_planned_until : datetime
+        Maximum time that has already been planned to avoid double planning.
+    high_price_strategies : dict[datetime.datetime, ThermiaStrategySlot]
+        Dictionary to store all strategies for future reference.
+    min_price_for_evu_block : float
+        Minimum price for EVU block mode.
+    max_evu_block_hours : int
+        Maximum number of hours for EVU block mode.
+    max_evu_block_duration : int
+        Maximum duration for EVU block mode.
+    min_price_for_hot_water_block : float
+        Minimum price for hot water block mode.
+    max_hot_water_block_hours : int
+        Maximum number of hours for hot water block mode.
+    max_hot_water_block_duration : int
+        Maximum duration for hot water block mode.
+    min_price_for_reduced_heat : float
+        Minimum price for reduced heat mode.
+    max_reduced_heat_hours : int
+        Maximum number of hours for reduced heat mode.
+    max_reduced_heat_duration : int
+        Maximum duration for reduced heat mode.
+    reduced_heat_temperature : int
+        Temperature for reduced heat mode.
+    max_price_for_increased_heat : float
+        Maximum price for increased heat mode.
+    min_energy_surplus_for_increased_heat : int
+        Minimum energy surplus for increased heat mode.
+    max_increased_heat_hours : int
+        Maximum number of hours for increased heat mode.
+    max_increased_heat_duration : int
+        Maximum duration for increased heat mode.
+    increased_heat_temperature : int
+        Temperature for increased heat mode.
+    max_increased_heat_outdoor_temperature : int
+        Maximum outdoor temperature for increased heat mode.
+    min_energy_surplus_for_hot_water_boost : int
+        Minimum energy surplus for hot water boost mode.
+    max_hot_water_boost_hours : int
+        Maximum number of hours for hot water boost mode.
+
+    Methods:
+    __init__(config: dict, timezone: pytz.timezone) -> None
+    fetch_param_from_config(config: dict, name: str, default: float) -> float
+        Fetch a parameter from the configuration dictionary.
+    ensure_connection()
+        Ensure connection to the Thermia heat pump.
+    activate_mqtt(api_mqtt_api)
+        Activate MQTT and publish internal values.
+    refresh_api_values()
+        Refresh API values and publish them to MQTT.
+    set_heatpump_parameters(net_consumption: np.ndarray, prices: dict)
+    adjust_mode_duration(heat_modes: list[str], prices: list[float], inspected_mode: str, downgrade_mode: str, max_mode_duration: int)
+    applyMode(mode: str, start_index: int, end_index: int)
+        Apply the specified mode for the given time range.
+    ensure_strategy_for_time_window(start_time: datetime, end_time: datetime, mode: str)
+        Ensure a strategy is present for the specified time window.
+    install_schedule_in_heatpump(start_time: datetime, end_time: datetime, mode: str)
+        Install a schedule in the heat pump based on the provided start time, end time, and mode.
+    cleanupHighPriceStrategies()
+    cleanupHighPriceHandlers()
+    publish_strategies_to_mqtt()
+        Publish high price strategies and handlers to MQTT.
+    __del__()
+    """
+
     heat_pump: Optional[ThermiaHeatPump] = None
     mqtt_client: Optional[MQTT_API] = None
 
@@ -122,7 +266,7 @@ class ThermiaHeatpump(HeatpumpBaseclass):
         super().__init__()
         self.user = config["user"]
         self.password = config["password"]
-        self.ensure_connection()
+        self.__ensure_connection()
         self.batcontrol_timezone = timezone
         self.already_planned_until = (
             datetime.datetime.now()
@@ -132,66 +276,68 @@ class ThermiaHeatpump(HeatpumpBaseclass):
 
         ## fetch strategy params from config
         ### EVU Block
-        self.min_price_for_evu_block = self.fetch_param_from_config(
+        self.min_price_for_evu_block = self.__fetch_param_from_config(
             config, "min_price_for_evu_block", 0.6
         )
-        self.max_evu_block_hours = self.fetch_param_from_config(
+        self.max_evu_block_hours = self.__fetch_param_from_config(
             config, "max_evu_block_hours", 14
         )
-        self.max_evu_block_duration = self.fetch_param_from_config(
+        self.max_evu_block_duration = self.__fetch_param_from_config(
             config, "max_evu_block_duration", 6
         )
         ### Hot Water Block
-        self.min_price_for_hot_water_block = self.fetch_param_from_config(
+        self.min_price_for_hot_water_block = self.__fetch_param_from_config(
             config, "min_price_for_hot_water_block", 0.4
         )
-        self.max_hot_water_block_hours = self.fetch_param_from_config(
+        self.max_hot_water_block_hours = self.__fetch_param_from_config(
             config, "max_hot_water_block_hours", 10
         )
-        self.max_hot_water_block_duration = self.fetch_param_from_config(
+        self.max_hot_water_block_duration = self.__fetch_param_from_config(
             config, "max_hot_water_block_duration", 4
         )
         ### Reduced Heat
-        self.min_price_for_reduced_heat = self.fetch_param_from_config(
+        self.min_price_for_reduced_heat = self.__fetch_param_from_config(
             config, "min_price_for_reduced_heat", 0.3
         )
-        self.max_reduced_heat_hours = self.fetch_param_from_config(
+        self.max_reduced_heat_hours = self.__fetch_param_from_config(
             config, "max_reduced_heat_hours", 14
         )
-        self.max_reduced_heat_duration = self.fetch_param_from_config(
+        self.max_reduced_heat_duration = self.__fetch_param_from_config(
             config, "max_reduced_heat_duration", 6
         )
-        self.reduced_heat_temperature = self.fetch_param_from_config(
+        self.reduced_heat_temperature = self.__fetch_param_from_config(
             config, "reduced_heat_temperature", 20
         )
         ### Increased Heat
-        self.max_price_for_increased_heat = self.fetch_param_from_config(
+        self.max_price_for_increased_heat = self.__fetch_param_from_config(
             config, "max_price_for_increased_heat", 0.2
         )
-        self.min_energy_surplus_for_increased_heat = self.fetch_param_from_config(
+        self.min_energy_surplus_for_increased_heat = self.__fetch_param_from_config(
             config, "min_energy_surplus_for_increased_heat", 1000
         )
-        self.max_increased_heat_hours = self.fetch_param_from_config(
+        self.max_increased_heat_hours = self.__fetch_param_from_config(
             config, "max_increased_heat_hours", 14
         )
-        self.max_increased_heat_duration = self.fetch_param_from_config(
+        self.max_increased_heat_duration = self.__fetch_param_from_config(
             config, "max_increased_heat_duration", 6
         )
-        self.increased_heat_temperature = self.fetch_param_from_config(
+        self.increased_heat_temperature = self.__fetch_param_from_config(
             config, "increased_heat_temperature", 22
         )
-        self.max_increased_heat_outdoor_temperature = self.fetch_param_from_config(
+        self.max_increased_heat_outdoor_temperature = self.__fetch_param_from_config(
             config, "max_increased_heat_outdoor_temperature", 15
         )
         ### Hot Water Boost
-        self.min_energy_surplus_for_hot_water_boost = self.fetch_param_from_config(
+        self.min_energy_surplus_for_hot_water_boost = self.__fetch_param_from_config(
             config, "min_energy_surplus_for_hot_water_boost", 2500
         )
-        self.max_hot_water_boost_hours = self.fetch_param_from_config(
+        self.max_hot_water_boost_hours = self.__fetch_param_from_config(
             config, "max_hot_water_boost_hours", 1
         )
 
-    def fetch_param_from_config(self, config: dict, name: str, default: float) -> float:
+    def __fetch_param_from_config(
+        self, config: dict, name: str, default: float
+    ) -> float:
         if name in config:
             logger.debug(f"[Heatpump] fetching {name} from config: {config[name]}")
             return config[name]
@@ -201,7 +347,7 @@ class ThermiaHeatpump(HeatpumpBaseclass):
             )
             return default
 
-    def ensure_connection(self):
+    def __ensure_connection(self):
         if not self.heat_pump:
             try:
                 thermia = Thermia(self.user, self.password)
@@ -226,10 +372,30 @@ class ThermiaHeatpump(HeatpumpBaseclass):
     # Topic is: base_topic + '/heatpumps/0/'
     #
     def activate_mqtt(self, api_mqtt_api):
+        """
+        Activate MQTT and publish internal values.
+
+        Args:
+            api_mqtt_api (MQTT_API): The MQTT API client to use for publishing values.
+        """
         self.mqtt_client = api_mqtt_api
         logger.info(f"[Heatpump] Activating MQTT")
         logger.debug(f"[Heatpump] MQTT topic: {self._get_mqtt_topic()}")
-        logger.debug(f"[Heatpump] MQTT driver: {self.mqtt_client}")
+
+    def refresh_api_values(self):
+        """
+        Refresh API values and publish them to MQTT.
+
+        This method ensures the connection to the heat pump, updates the heat pump data,
+        and publishes the updated values to the MQTT client. It also publishes the configuration
+        values to the MQTT client.
+
+        Args:
+            None
+
+        Returns:
+            None
+        """
         # /set is appended to the topic
 
     #       self.mqtt_api.register_set_callback(self._get_mqtt_topic(
@@ -237,7 +403,7 @@ class ThermiaHeatpump(HeatpumpBaseclass):
 
     def refresh_api_values(self):
         logger.debug(f"[Heatpump] Refreshing API values")
-        self.ensure_connection()
+        self.__ensure_connection()
 
         if self.mqtt_client and self.heat_pump:
             try:
