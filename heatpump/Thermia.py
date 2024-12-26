@@ -328,30 +328,23 @@ class ThermiaHeatpump(HeatpumpBaseclass):
 
                 logger.debug(f"[Heatpump] config values published to MQTT  ...")
 
-            
                 # Delete all existing high price handlers
                 handlers_prefix = self._get_mqtt_topic() + "handlers/"
-                MQTT_API.delete_all_topics(
-                    handlers_prefix
-                )
+                MQTT_API.delete_all_topics(handlers_prefix)
 
                 for start_time, handler in self.high_price_handlers.items():
                     self.mqtt_client.generic_publish(
-                        handlers_prefix
-                        + start_time.strftime("%Y-%m-%d_%H:%M"),
+                        handlers_prefix + start_time.strftime("%Y-%m-%d_%H:%M"),
                         handler.schedule.functionId,
                     )
 
                 # Delete all existing high price strategies
                 strategies_prefix = self._get_mqtt_topic() + "strategies/"
-                self.delete_all_mqtt_topics(
-                    strategies_prefix
-                )
+                self.delete_all_mqtt_topics(strategies_prefix)
 
                 for start_time, strategy in self.high_price_strategies.items():
-                    high_price_strategy_topic = (
-                        strategies_prefix
-                        + start_time.strftime("%Y-%m-%d_%H:%M")
+                    high_price_strategy_topic = strategies_prefix + start_time.strftime(
+                        "%Y-%m-%d_%H:%M"
                     )
                     self.mqtt_client.generic_publish(
                         high_price_strategy_topic, strategy.mode
@@ -446,7 +439,7 @@ class ThermiaHeatpump(HeatpumpBaseclass):
                     f"[BatCTRL:HP] Replan from scratch: Deleted High Price Handler {handler.schedule}"
                 )
             self.high_price_handlers = {}
-        
+
             assumed_hourly_heatpump_energy_demand = 500  # watthour
             assumed_hotwater_reheat_energy_demand = 1500  # watthour
             assumed_hotwater_boost_energy_demand = 1500  # watthour
@@ -593,7 +586,12 @@ class ThermiaHeatpump(HeatpumpBaseclass):
         return
 
     def adjust_mode_duration(
-        self, heat_modes: list[str], prices: list[float], inspected_mode:str, downgrade_mode: str, max_mode_duration: int
+        self,
+        heat_modes: list[str],
+        prices: list[float],
+        inspected_mode: str,
+        downgrade_mode: str,
+        max_mode_duration: int,
     ):
         """
         Adjust the duration of a specific heat mode and downgrade it if it exceeds the maximum allowed duration.
@@ -642,7 +640,7 @@ class ThermiaHeatpump(HeatpumpBaseclass):
                 mode_duration = 0
                 start_index = -1
 
-    def applyMode(self, mode: str, start_index: int, end_index:int):
+    def applyMode(self, mode: str, start_index: int, end_index: int):
         logger.debug(
             f"[BatCTRL:HP] Apply Mode {mode} from +{start_index}h to +{end_index}h"
         )
