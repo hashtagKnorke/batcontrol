@@ -311,3 +311,21 @@ class MQTT_API(object):
         if self.client.is_connected() == True:
             self.client.publish(self.base_topic + '/' + topic, value)
         return
+
+    def delete_all_topics(self, prefix: str) -> None:
+        if self.client.is_connected() == True:
+            def on_message_delete(client, userdata, message):
+                logger.info(f'[MQTT] Deleting topic {message.topic}')
+                self.client.publish(message.topic, None, retain=True)
+            
+            self.client.message_callback_add(prefix + '/#', on_message_delete)
+            self.client.subscribe(prefix + '/#')
+
+            # Wait for all messages to be processed  
+            time.sleep(2)
+
+            self.client.unsubscribe(prefix + '/#')
+            self.client.message_callback_remove(prefix + '/#')
+        return
+    
+    
