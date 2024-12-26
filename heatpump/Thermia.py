@@ -30,14 +30,9 @@ class ThermiaHighPriceHandling:
         start_time (datetime.datetime): The start time of the high price period.
         end_time (datetime.datetime): The end time of the high price period.
         schedule (CalendarSchedule): The schedule associated with the high price period.
-    """
+"""
 
-    def __init__(
-        self,
-        start_time: datetime.datetime,
-        end_time: datetime.datetime,
-        schedule: CalendarSchedule,
-    ):
+    def __init__(self, start_time: datetime.datetime, end_time: datetime.datetime, schedule: CalendarSchedule):
         """
         Initializes the ThermiaHighPriceHandling class with the specified start time, end time, and schedule.
 
@@ -47,7 +42,6 @@ class ThermiaHighPriceHandling:
             schedule (CalendarSchedule): The schedule associated with the high price period.
         """
         ...
-
     def __init__(
         self,
         start_time: datetime.datetime,
@@ -84,7 +78,7 @@ class ThermiaStrategySlot:
     setHandling(handler: ThermiaHighPriceHandling):
         Sets the handler for high price handling.
     """
-
+    
     def __init__(
         self,
         start_time: datetime.datetime,
@@ -108,6 +102,7 @@ class ThermiaStrategySlot:
         self.mode = mode
         self.price = price
         self.consumption = consumption
+        self.handler = None
 
     def setHandling(self, handler: ThermiaHighPriceHandling):
         """
@@ -335,9 +330,7 @@ class ThermiaHeatpump(HeatpumpBaseclass):
             config, "max_hot_water_boost_hours", 1
         )
 
-    def __fetch_param_from_config(
-        self, config: dict, name: str, default: float
-    ) -> float:
+    def __fetch_param_from_config(self, config: dict, name: str, default: float) -> float:
         if name in config:
             logger.debug(f"[Heatpump] fetching {name} from config: {config[name]}")
             return config[name]
@@ -381,7 +374,6 @@ class ThermiaHeatpump(HeatpumpBaseclass):
         self.mqtt_client = api_mqtt_api
         logger.info(f"[Heatpump] Activating MQTT")
         logger.debug(f"[Heatpump] MQTT topic: {self._get_mqtt_topic()}")
-
     def refresh_api_values(self):
         """
         Refresh API values and publish them to MQTT.
