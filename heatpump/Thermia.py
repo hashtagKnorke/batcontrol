@@ -805,9 +805,20 @@ class ThermiaHeatpump(HeatpumpBaseclass):
             self.mqtt_client.delete_all_topics(handlers_prefix)
 
             for start_time, handler in self.high_price_handlers.items():
+                mqtt_handler_topic = handlers_prefix + start_time.strftime(
+                    "%Y-%m-%d_%H:%M"
+                )
                 self.mqtt_client.generic_publish(
-                    handlers_prefix + start_time.strftime("%Y-%m-%d_%H:%M"),
+                    mqtt_handler_topic,
                     handler.schedule.functionId,
+                )
+                self.mqtt_client.generic_publish(
+                    mqtt_handler_topic + "/start_time",
+                    handler.start_time.strftime("%Y-%m-%d %H:%M"),
+                )
+                self.mqtt_client.generic_publish(
+                    mqtt_handler_topic + "/end_time",
+                    handler.end_time.strftime("%Y-%m-%d %H:%M"),
                 )
 
             # Delete all existing high price strategies
@@ -835,14 +846,10 @@ class ThermiaHeatpump(HeatpumpBaseclass):
                     strategy.start_time.strftime("%Y-%m-%d %H:%M"),
                 )
                 self.mqtt_client.generic_publish(
-                    high_price_strategy_topic + "/start_time_stamp",
-                    strategy.start_time.timestamp(),
-                )
-                self.mqtt_client.generic_publish(
                     high_price_strategy_topic + "/end_time",
                     strategy.end_time.strftime("%Y-%m-%d %H:%M"),
                 )
-                if hasattr(strategy, "handler"):
+                if strategy.handler:
                     self.mqtt_client.generic_publish(
                         high_price_strategy_topic + "/handler",
                         strategy.handler.schedule.functionId,
