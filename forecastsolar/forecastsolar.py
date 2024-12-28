@@ -128,7 +128,9 @@ class ForecastSolar(object):
                 else:
                     logger.warning('[ForecastSolar] forecast solar API rate limit exceeded [%s]. No retry after information available, dumping headers', response.text)
                     for header, value in response.headers.items():
-                        logger.debug('[ForecastSolar 429] Header: %s = %s', header, value)
+                        logger.debug(f'[ForecastSolar 429] Header: {header} = {value}')
+                # stop processing further installations to not worsen the rate limit
+                break
 
             else:
                 logger.warning(
