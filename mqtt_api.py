@@ -313,22 +313,33 @@ class MQTT_API(object):
         return
 
     def delete_all_topics(self, prefix: str) -> None:
-        logger.debug(f'[MQTT] Deleting all topics with prefix {prefix}')
+        """
+        Deletes all MQTT topics with the given prefix.
+        This method constructs a full topic prefix by combining the base topic and the provided prefix.
+        It then subscribes to all topics matching this prefix and publishes a message with a `None` payload
+        and `retain=True` to delete each topic.
+        Args:
+            prefix (str): The prefix of the topics to delete.
+        Returns:
+            None
+        """
+        f_q_prefix=self.base_topic + '/' + prefix
+        logger.debug(f'[MQTT] Deleting all topics with prefix {f_q_prefix}')
         if self.client.is_connected() == True:
             def on_message_delete(client, userdata, message):
                 logger.info(f'[MQTT] Deleting topic {message.topic}')
                 self.client.publish(message.topic, None, retain=True)
             
-            self.client.message_callback_add(prefix + '/#', on_message_delete)
-            self.client.subscribe(prefix + '/#')
+            self.client.message_callback_add(f_q_prefix + '/#', on_message_delete)
+            self.client.subscribe(f_q_prefix + '/#')
             logger.debug(f'[MQTT] Waiting for messages to be processed')
 
             # Wait for all messages to be processed  
             time.sleep(20)
 
-            self.client.unsubscribe(prefix + '/#')
-            self.client.message_callback_remove(prefix + '/#')
-            logger.debug(f'[MQTT] All topics with prefix {prefix} deleted')
+            self.client.unsubscribe(f_q_prefix + '/#')
+            self.client.message_callback_remove(f_q_prefix + '/#')
+            logger.debug(f'[MQTT] All topics with prefix {f_q_prefix} deleted')
         return
     
     
