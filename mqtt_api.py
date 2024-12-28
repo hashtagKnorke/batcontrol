@@ -313,6 +313,7 @@ class MQTT_API(object):
         return
 
     def delete_all_topics(self, prefix: str) -> None:
+        logger.debug(f'[MQTT] Deleting all topics with prefix {prefix}')
         if self.client.is_connected() == True:
             def on_message_delete(client, userdata, message):
                 logger.info(f'[MQTT] Deleting topic {message.topic}')
@@ -320,12 +321,14 @@ class MQTT_API(object):
             
             self.client.message_callback_add(prefix + '/#', on_message_delete)
             self.client.subscribe(prefix + '/#')
+            logger.debug(f'[MQTT] Waiting for messages to be processed')
 
             # Wait for all messages to be processed  
-            time.sleep(2)
+            time.sleep(20)
 
             self.client.unsubscribe(prefix + '/#')
             self.client.message_callback_remove(prefix + '/#')
+            logger.debug(f'[MQTT] All topics with prefix {prefix} deleted')
         return
     
     
