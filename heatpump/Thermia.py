@@ -959,7 +959,13 @@ class ThermiaHeatpump(HeatpumpBaseclass):
     def publish_strategies_to_mqtt(self):
         if self.mqtt_client:
             # Delete all existing high price handlers
+            logger.debug(
+                f"[Heatpump] publishing strategy values ({len(self.high_price_handlers)} handlers, {len(self.high_price_strategies)} strategies) to MQTT"
+            )
+            
             handlers_prefix = self._get_mqtt_topic() + "handlers/"
+            
+            logger.debug(f"[Heatpump] Cleaning up all previously published handlers at {handlers_prefix}")
             self.mqtt_client.delete_all_topics(handlers_prefix)
 
             for start_time, handler in self.high_price_handlers.items():
@@ -981,6 +987,7 @@ class ThermiaHeatpump(HeatpumpBaseclass):
 
             # Delete all existing high price strategies
             strategies_prefix = self._get_mqtt_topic() + "strategies/"
+            logger.debug(f"[Heatpump] Cleaning up all previously published strategies at {strategies_prefix}")
             self.mqtt_client.delete_all_topics(strategies_prefix)
 
             for start_time, strategy in self.high_price_strategies.items():
