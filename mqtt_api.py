@@ -357,6 +357,9 @@ class MqttApi:
         Returns:
             None
         """
+        if prefix.endswith('/'):
+            prefix = prefix[:-1]
+
         f_q_prefix=self.base_topic + '/' + prefix
         logger.debug(f'[MQTT] Deleting all topics with prefix {f_q_prefix}')
         if self.client.is_connected() == True:
@@ -364,16 +367,17 @@ class MqttApi:
                 logger.info(f'[MQTT] Deleting topic {message.topic}')
                 self.client.publish(message.topic, None, retain=True)
             
-            self.client.message_callback_add(f_q_prefix + '/#', on_message_delete)
-            self.client.subscribe(f_q_prefix + '/#')
-            logger.debug(f'[MQTT] Waiting for messages to be processed')
+            topic_wildcard = f_q_prefix + '/#'
+            self.client.message_callback_add(topic_wildcard, on_message_delete)
+            self.client.subscribe(topic_wildcard)
+            logger.debug(f'[MQTT] Waiting for messages matching topic ({topic_wildcard}) to be processed')
 
             # Wait for all messages to be processed  
             time.sleep(20)
 
-            self.client.unsubscribe(f_q_prefix + '/#')
-            self.client.message_callback_remove(f_q_prefix + '/#')
-            logger.debug(f'[MQTT] All topics with prefix {f_q_prefix} deleted')
+            self.client.unsubscribe(topic_wildcard)
+            self.client.message_callback_remove(topic_wildcard)
+            logger.debug(f'[MQTT] All topics with prefix {topic_wildcard} deleted')
         return
     
     
