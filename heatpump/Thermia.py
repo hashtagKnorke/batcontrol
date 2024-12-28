@@ -1021,6 +1021,7 @@ class ThermiaHeatpump(HeatpumpBaseclass):
         """
         Destructor to clean up high price handlers and delete corresponding schedules in the Thermia API.
         """
+        logger.debug("[ThermiaHeatpump Destructor] Cleaning up high price handlers")
         if self.heat_pump:
             for start_time, handler in self.high_price_handlers.items():
                 try:
