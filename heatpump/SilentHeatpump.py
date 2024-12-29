@@ -1,5 +1,5 @@
 import logging
-from baseclass import HeatpumpBaseclass
+from .baseclass import HeatpumpBaseclass
 
 # Configure the logger
 logger = logging.getLogger("__main__")
