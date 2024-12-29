@@ -11,7 +11,7 @@ from ThermiaOnlineAPI.const import (
 )
 from ThermiaOnlineAPI.model.HeatPump import ThermiaHeatPump
 from ThermiaOnlineAPI.model.CalendarSchedule import CalendarSchedule
-from mqtt_api import MQTT_API
+from mqtt_api import MqttApi
 from .baseclass import HeatpumpBaseclass
 from typing import Optional, Dict
 
@@ -207,7 +207,7 @@ class ThermiaHeatpump(HeatpumpBaseclass):
     """
 
     heat_pump: Optional[ThermiaHeatPump] = None
-    mqtt_client: Optional[MQTT_API] = None
+    mqtt_client: Optional[MqttApi] = None
 
     ## store all high price handlers to avoid duplicates and to be able to remove them
     high_price_handlers: dict[datetime.datetime, ThermiaHighPriceHandling] = {}
@@ -364,16 +364,17 @@ class ThermiaHeatpump(HeatpumpBaseclass):
     #
     # Topic is: base_topic + '/heatpumps/0/'
     #
-    def activate_mqtt(self, api_mqtt_api):
+    def activate_mqtt(self, api_mqtt_api: MqttApi):
         """
         Activate MQTT and publish internal values.
 
         Args:
-            api_mqtt_api (MQTT_API): The MQTT API client to use for publishing values.
+            api_mqtt_api (mqtt_api.MqttApi): The MQTT API client to use for publishing values.
         """
         self.mqtt_client = api_mqtt_api
         logger.info(f"[Heatpump] Activating MQTT")
         logger.debug(f"[Heatpump] MQTT topic: {self._get_mqtt_topic()}")
+    
     def refresh_api_values(self):
         """
         Refresh API values and publish them to MQTT.

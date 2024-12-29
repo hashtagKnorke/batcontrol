@@ -8,7 +8,7 @@ import numpy as np
 
 
 class HeatpumpBaseclass(object):
-    def activate_mqtt(self, mqtt_api: mqtt_api):
+    def activate_mqtt(self, mqtt_api: mqtt_api.MqttApi):
         """
         Activates the MQTT functionality for the heat pump.
 
