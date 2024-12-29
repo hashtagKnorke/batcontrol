@@ -1,7 +1,28 @@
+""" #pylint: disable=too-many-lines
+This module provides classes and methods for managing and controlling a Thermia heat pump system, 
+including handling high price periods and applying various strategies based on energy consumption 
+and prices.
+Classes:
+    ThermiaHighPriceHandling: Represents an applied setting to handle high price periods 
+                              for the Thermia heat pump system.
+    ThermiaStrategySlot: Represents a strategy decision for a certain time slot.
+    ThermiaHeatpump: Manages and controls a Thermia heat pump, 
+                     providing methods to initialize the heat pump, 
+                     fetch configuration parameters, 
+                     activate MQTT, refresh API values, 
+                     set heat pump parameters, adjust mode duration, 
+                     apply modes, ensure strategies for time windows, 
+                     install schedules, clean up high price strategies and handlers, 
+                     and publish strategies to MQTT.
+    logger: Logger instance for logging messages.
+"""
+
+from dataclasses import dataclass
 import inspect
 import logging
 import datetime
-
+from typing import Optional
+import pytz
 import numpy as np
 
 from ThermiaOnlineAPI.const import (
@@ -11,43 +32,41 @@ from ThermiaOnlineAPI.const import (
 )
 from ThermiaOnlineAPI.model.HeatPump import ThermiaHeatPump
 from ThermiaOnlineAPI.model.CalendarSchedule import CalendarSchedule
-from mqtt_api import MqttApi
-from .baseclass import HeatpumpBaseclass
-from typing import Optional, Dict
-
-
 from ThermiaOnlineAPI import Thermia
 from ThermiaOnlineAPI.utils import utils
-from typing import List, Tuple
-import pytz
+
+from mqtt_api import MqttApi
+from .baseclass import HeatpumpBaseclass
 
 
+@dataclass
 class ThermiaHighPriceHandling:
     """
-    A class representing an applied setting to handle high price periods for the Thermia heat pump system.
+    A class representing an applied setting to handle high price periods
+    for the Thermia heat pump system.
 
     Attributes:
         start_time (datetime.datetime): The start time of the high price period.
         end_time (datetime.datetime): The end time of the high price period.
         schedule (CalendarSchedule): The schedule associated with the high price period.
-"""
+    """
 
-    def __init__(self, start_time: datetime.datetime, end_time: datetime.datetime, schedule: CalendarSchedule):
-        """
-        Initializes the ThermiaHighPriceHandling class with the specified start time, end time, and schedule.
-
-        Args:
-            start_time (datetime.datetime): The start time of the high price period.
-            end_time (datetime.datetime): The end time of the high price period.
-            schedule (CalendarSchedule): The schedule associated with the high price period.
-        """
-        ...
     def __init__(
         self,
         start_time: datetime.datetime,
         end_time: datetime.datetime,
         schedule: CalendarSchedule,
     ):
+        """
+        Initializes the ThermiaHighPriceHandling class with the specified
+        start time, end time, and schedule.
+
+        Args:
+            start_time (datetime.datetime): The start time of the high price period.
+            end_time (datetime.datetime): The end time of the high price period.
+            schedule (CalendarSchedule): The schedule associated with the high price period.
+        """
+
         self.start_time = start_time
         self.end_time = end_time
         self.schedule = schedule
@@ -56,6 +75,7 @@ class ThermiaHighPriceHandling:
         return f"HighPriceHandlingStrategy(schedule={self.schedule})"
 
 
+@dataclass
 class ThermiaStrategySlot:
     """
     A class to represent a strategy  decision for a certain time slot.
@@ -78,7 +98,7 @@ class ThermiaStrategySlot:
     setHandling(handler: ThermiaHighPriceHandling):
         Sets the handler for high price handling.
     """
-    
+
     def __init__(
         self,
         start_time: datetime.datetime,
@@ -104,24 +124,25 @@ class ThermiaStrategySlot:
         self.consumption = consumption
         self.handler = None
 
-    def setHandling(self, handler: ThermiaHighPriceHandling):
+    def associate_handler(self, handler: ThermiaHighPriceHandling):
         """
         Sets the handler for high price handling.
 
         Args:
-            handler (ThermiaHighPriceHandling): An instance of ThermiaHighPriceHandling that defines how to handle high price situations.
+            handler (ThermiaHighPriceHandling): An instance of ThermiaHighPriceHandling 
+                                                that defines how to handle high price situations.
         """
         self.handler = handler
 
     def __repr__(self):
-        if hasattr(self, "handler"):
+        if hasattr(self, "handler"): #pylint: disable=no-else-return
             return f"STRATEGY({self.start_time}-{self.end_time}:[{self.mode}]->{self.handler.schedule})"
         else:
             return f"STRATEGY({self.start_time}-{self.end_time}:[{self.mode}])"
 
 
 logger = logging.getLogger("__main__")
-logger.info(f"[Heatpump] loading module ")
+logger.info("[Heatpump] loading module ")
 
 
 class ThermiaHeatpump(HeatpumpBaseclass):
@@ -330,13 +351,17 @@ class ThermiaHeatpump(HeatpumpBaseclass):
             config, "max_hot_water_boost_hours", 1
         )
 
-    def __fetch_param_from_config(self, config: dict, name: str, default: float) -> float:
+    def __fetch_param_from_config(
+        self, config: dict, name: str, default: float
+    ) -> float:
         if name in config:
-            logger.debug(f"[Heatpump] fetching {name} from config: {config[name]}")
+            logger.debug(
+                "[ThermiaHeatpump] fetching %s from config: %s", name, config[name]
+            )
             return config[name]
         else:
             logger.debug(
-                f"[Heatpump] using default for config {name}  default: {default}"
+                "[ThermiaHeatpump] using default for config %s  default: %s", name, default
             )
             return default
 
@@ -344,19 +369,20 @@ class ThermiaHeatpump(HeatpumpBaseclass):
         if not self.heat_pump:
             try:
                 thermia = Thermia(self.user, self.password)
-                logger.debug("Connected: " + str(thermia.connected))
+                logger.debug("[ThermiaHeatpump] Connected: %s", str(thermia.connected))
 
                 if not thermia.heat_pumps:
                     raise Exception("No heat pumps found in account")
                 heat_pump = thermia.heat_pumps[0]
                 self.heat_pump = heat_pump
-                logger.debug("initialized HeatPump" + str(self.heat_pump))
                 logger.debug(
-                    "current supply line temperature: "
-                    + str(heat_pump.supply_line_temperature)
+                    "[ThermiaHeatpump] initialized HeatPump %s", str(self.heat_pump)
+                )
+                logger.debug(
+                    "[ThermiaHeatpump] current supply line temperature: %s", str(heat_pump.supply_line_temperature)
                 )
             except Exception as e:
-                logger.error(f"Failed to connect to Thermia: {e}")
+                logger.error("[ThermiaHeatpump] Failed to connect to Thermia: %s", e)
                 self.heat_pump = None
 
     # Start API functions
@@ -364,17 +390,18 @@ class ThermiaHeatpump(HeatpumpBaseclass):
     #
     # Topic is: base_topic + '/heatpumps/0/'
     #
-    def activate_mqtt(self, api_mqtt_api: MqttApi):
+    def activate_mqtt(self, mqtt_api: MqttApi):
         """
         Activate MQTT and publish internal values.
 
         Args:
             api_mqtt_api (mqtt_api.MqttApi): The MQTT API client to use for publishing values.
         """
-        self.mqtt_client = api_mqtt_api
-        logger.info(f"[Heatpump] Activating MQTT")
-        logger.debug(f"[Heatpump] MQTT topic: {self._get_mqtt_topic()}")
-    
+
+        self.mqtt_client = mqtt_api
+        logger.info("[ThermiaHeatpump]  Activating MQTT")
+        logger.debug("[ThermiaHeatpump] MQTT topic: %s", self._get_mqtt_topic())
+
     def refresh_api_values(self):
         """
         Refresh API values and publish them to MQTT.
@@ -389,13 +416,8 @@ class ThermiaHeatpump(HeatpumpBaseclass):
         Returns:
             None
         """
-        # /set is appended to the topic
 
-    #       self.mqtt_api.register_set_callback(self._get_mqtt_topic(
-    #       ) + 'max_grid_charge_rate', self.api_set_max_grid_charge_rate, int)
-
-    def refresh_api_values(self):
-        logger.debug(f"[Heatpump] Refreshing API values")
+        logger.debug("[ThermiaHeatpump] Refreshing API values")
         self.__ensure_connection()
 
         if self.mqtt_client and self.heat_pump:
@@ -412,7 +434,7 @@ class ThermiaHeatpump(HeatpumpBaseclass):
                     self.mqtt_client.generic_publish(
                         self._get_mqtt_topic() + name, value
                     )
-                logger.debug(f"[Heatpump] API values refreshed")
+                logger.debug("[ThermiaHeatpump] API values refreshed")
 
                 # Publish all config values with config/ prefix
                 config_topic_prefix = self._get_mqtt_topic() + "config/"
@@ -485,10 +507,10 @@ class ThermiaHeatpump(HeatpumpBaseclass):
                     self.max_hot_water_boost_hours,
                 )
 
-                logger.debug(f"[Heatpump] config values published to MQTT  ...")
+                logger.debug("[ThermiaHeatpump] config values published to MQTT  ...")
 
             except Exception as e:
-                logger.error(f"[Heatpump] Failed to refresh API values: {e}")
+                logger.error("[ThermiaHeatpump] Failed to refresh API values: %s", e)
 
     def _get_all_properties(self, obj):
         for name, method in inspect.getmembers(
@@ -535,7 +557,7 @@ class ThermiaHeatpump(HeatpumpBaseclass):
 
         max_timestamp = curr_hour_start + duration
         if self.heat_pump is not None and max_timestamp > self.already_planned_until:
-            logger.debug(f"[BatCTRL:HP] Planning until {max_timestamp}")
+            logger.debug("[ThermiaHeatpump] Planning until %s", max_timestamp)
 
             ## TODO: either full replan with purge of all strategies or just add new strategies and limit evaluation to new hours
             ## for now we do a full replan
@@ -543,7 +565,7 @@ class ThermiaHeatpump(HeatpumpBaseclass):
             for start_time, handler in self.high_price_handlers.items():
                 self.heat_pump.delete_schedule(handler.schedule)
                 logger.debug(
-                    f"[BatCTRL:HP] Replan from scratch: Deleted High Price Handler {handler.schedule}"
+                    "[ThermiaHeatpump] Replan from scratch: Deleted High Price Handler %s", handler.schedule
                 )
             self.high_price_handlers = {}
 
@@ -574,7 +596,7 @@ class ThermiaHeatpump(HeatpumpBaseclass):
                     heat_modes[h] = "W"
                     remaining_hot_water_boost_hours -= 1
                     logger.debug(
-                        f"[BatCTRL:HP] Set Hot Water Boost at +{h}h due to high surplus {net_consumption[h]}"
+                        "[ThermiaHeatpump] Set Hot Water Boost at +%dh due to high surplus %s", h, net_consumption[h]
                     )
                 elif (
                     net_consumption[h] < -self.min_energy_surplus_for_increased_heat
@@ -589,16 +611,16 @@ class ThermiaHeatpump(HeatpumpBaseclass):
                         remaining_increased_heat_hours -= 1
                         if prices[h] <= self.max_price_for_increased_heat:
                             logger.debug(
-                                f"[BatCTRL:HP] Set Increased Heat at +{h}h due to low price {prices[h]} and low outdoor temperature {self.heat_pump.outdoor_temperature}"
+                                "[ThermiaHeatpump] Set Increased Heat at +%dh due to low price %s and low outdoor temperature %s", h, prices[h], self.heat_pump.outdoor_temperature
                             )
                         else:
                             logger.debug(
-                                f"[BatCTRL:HP] Set Increased Heat at +{h}h due to high surplus {net_consumption[h]} and low outdoor temperature {self.heat_pump.outdoor_temperature}"
+                                "[ThermiaHeatpump] Set Increased Heat at +%dh due to high surplus %s and low outdoor temperature %s", h, net_consumption[h], self.heat_pump.outdoor_temperature
                             )
                     else:
                         heat_modes[h] = "N"
                         logger.debug(
-                            f"[BatCTRL:HP] Set Normal Heat at +{h}h due to high surplus {net_consumption[h]} and high outdoor temperature {self.heat_pump.outdoor_temperature}"
+                            "[ThermiaHeatpump] Set Normal Heat at +%dh due to high surplus %s and high outdoor temperature %s", h, net_consumption[h], self.heat_pump.outdoor_temperature
                         )
                 elif (
                     prices[h] >= self.min_price_for_evu_block
@@ -607,7 +629,7 @@ class ThermiaHeatpump(HeatpumpBaseclass):
                     heat_modes[h] = "E"
                     remaining_evu_block_hours -= 1
                     logger.debug(
-                        f"[BatCTRL:HP] Set EVU Block at +{h}h due to high price {prices[h]}"
+                        "[ThermiaHeatpump] Set EVU Block at +%dh due to high price %s", h, prices[h]
                     )
                 elif (
                     prices[h] >= self.min_price_for_hot_water_block
@@ -616,7 +638,7 @@ class ThermiaHeatpump(HeatpumpBaseclass):
                     heat_modes[h] = "B"
                     remaining_hot_water_block_hours -= 1
                     logger.debug(
-                        f"[BatCTRL:HP] Set Hot Water Block at +{h}h due to high price {prices[h]}"
+                        "[ThermiaHeatpump] Set Hot Water Block at +%dh due to high price %s", h, prices[h]
                     )
                 elif (
                     prices[h] >= self.min_price_for_reduced_heat
@@ -625,12 +647,12 @@ class ThermiaHeatpump(HeatpumpBaseclass):
                     heat_modes[h] = "R"
                     remaining_reduced_heat_hours -= 1
                     logger.debug(
-                        f"[BatCTRL:HP] Set Reduced Heat at +{h}h due to high price {prices[h]}"
+                        "[ThermiaHeatpump] Set Reduced Heat at +%dh due to high price %s", h, prices[h]
                     )
                 else:
                     heat_modes[h] = "N"
                     logger.debug(
-                        f"[BatCTRL:HP] Set Normal Heat at +{h}h due to price {prices[h]}"
+                        "[ThermiaHeatpump] Set Normal Heat at +%dh due to price %s", h, prices[h]
                     )
 
             # Evaluate the duration of each mode and downgrade to lower mode if necessary
@@ -647,7 +669,7 @@ class ThermiaHeatpump(HeatpumpBaseclass):
                 heat_modes, prices, "H", "N", self.max_increased_heat_duration
             )
 
-            logger.debug(f"[BatCTRL:HP] Adjusted Heatpump Modes: {heat_modes}")
+            logger.debug("[ThermiaHeatpump] Adjusted Heatpump Modes: %s", heat_modes)
 
             # Iterate over heat modes and handle windows of equal mode
             start_index = 0
@@ -689,7 +711,7 @@ class ThermiaHeatpump(HeatpumpBaseclass):
 
         else:
             logger.debug(
-                f"[BatCTRL:HP] No replanning necessary, already planned until {self.already_planned_until}"
+                "[ThermiaHeatpump] No replanning necessary, already planned until %s", self.already_planned_until
             )
         return
 
@@ -734,13 +756,13 @@ class ThermiaHeatpump(HeatpumpBaseclass):
                     if prices[start_index] <= prices[h]:
                         heat_modes[start_index] = downgrade_mode
                         logger.debug(
-                            f"[BatCTRL:HP] Downgrade {inspected_mode} to {downgrade_mode} at +{start_index}h due to duration limit"
+                            "[ThermiaHeatpump] Downgrade %s to %s at +%dh due to duration limit", inspected_mode, downgrade_mode, start_index
                         )
                         start_index += 1
                     else:
                         heat_modes[h] = downgrade_mode
                         logger.debug(
-                            f"[BatCTRL:HP] Downgrade {inspected_mode} to {downgrade_mode} at +{h}h due to duration limit"
+                            "[ThermiaHeatpump] Downgrade %s to %s at +%dh due to duration limit", inspected_mode, downgrade_mode, h
                         )
                     mode_duration = 0
                     start_index = -1
@@ -750,7 +772,7 @@ class ThermiaHeatpump(HeatpumpBaseclass):
 
     def applyMode(self, mode: str, start_index: int, end_index: int):
         logger.debug(
-            f"[BatCTRL:HP] Apply Mode {mode} from +{start_index}h to +{end_index}h"
+            "[ThermiaHeatpump] Apply Mode %s from +%dh to +%dh", mode, start_index, end_index
         )
 
         hours_until_range_start = datetime.timedelta(hours=start_index)
@@ -793,14 +815,14 @@ class ThermiaHeatpump(HeatpumpBaseclass):
 
         duration = end_time - start_time
         logger.info(
-            f"[ThermiaHeatpump] Planning Strategy [{mode}] starting at {start_time}, duration: {duration}"
+            "[ThermiaHeatpump] Planning Strategy [%s] starting at %s, duration: %s", mode, start_time, duration
         )
 
         # Check if a strategy already exists for the given start time
         if start_time in self.high_price_handlers:
             existing_strategy = self.high_price_handlers[start_time]
             logger.info(
-                f"[ThermiaHeatpump] price handler already exists for start time {start_time}: {existing_strategy}"
+                "[ThermiaHeatpump] price handler already exists for start time %s: %s", start_time, existing_strategy
             )
             return
 
@@ -810,7 +832,7 @@ class ThermiaHeatpump(HeatpumpBaseclass):
                 start_time, end_time, schedule
             )
             logger.info(
-                f"[ThermiaHeatpump] Created high price handler: {high_price_strategy}"
+                "[ThermiaHeatpump] Created high price handler: %s", high_price_strategy
             )
             self.high_price_handlers[start_time] = high_price_strategy
         self.cleanupHighPriceHandlers()
@@ -846,7 +868,7 @@ class ThermiaHeatpump(HeatpumpBaseclass):
             )
             schedule = self.heat_pump.add_new_schedule(planned_schedule)
             logger.debug(
-                f"[BatCTRL:HP] Set Heatpump to EVU block from {start_str} to {end_str}"
+                "[ThermiaHeatpump] Set Heatpump to EVU block from %s to %s", start_str, end_str
             )
             return schedule
         elif mode == "B":
@@ -855,7 +877,7 @@ class ThermiaHeatpump(HeatpumpBaseclass):
             )
             schedule = self.heat_pump.add_new_schedule(planned_schedule)
             logger.debug(
-                f"[BatCTRL:HP] Set Heatpump to Hot water BLOCK from {start_str} to {end_str}"
+                "[ThermiaHeatpump] Set Heatpump to Hot water BLOCK from %s to %s", start_str, end_str
             )
             return schedule
         elif mode == "R":
@@ -867,7 +889,7 @@ class ThermiaHeatpump(HeatpumpBaseclass):
             )
             schedule = self.heat_pump.add_new_schedule(planned_schedule)
             logger.debug(
-                f"[BatCTRL:HP] Set Heatpump to REDUCED Heating ({self.reduced_heat_temperature}) from {start_str} to {end_str}"
+                "[ThermiaHeatpump] Set Heatpump to REDUCED Heating (%s) from %s to %s", self.reduced_heat_temperature, start_str, end_str
             )
             return schedule
         elif mode == "H":
@@ -879,21 +901,21 @@ class ThermiaHeatpump(HeatpumpBaseclass):
             )
             schedule = self.heat_pump.add_new_schedule(planned_schedule)
             logger.debug(
-                f"[BatCTRL:HP] Set Heatpump to INCREASED Heating ({self.increased_heat_temperature}) from {start_str} to {end_str}"
+                "[ThermiaHeatpump] Set Heatpump to INCREASED Heating (%s) from %s to %s", self.increased_heat_temperature, start_str, end_str
             )
             return schedule
         elif mode == "W":
             logger.debug(
-                f"[BatCTRL:HP] TODO No impl for  Heatpump to Hot Water BOOST from {start_str} to {end_str}"
+                "[ThermiaHeatpump] TODO No impl for  Heatpump to Hot Water BOOST from %s to %s", start_str, end_str
             )
             return
         elif mode == "N":
             logger.debug(
-                f"[BatCTRL:HP] No change in Heatpump mode from {start_str} to {end_str}"
+                "[ThermiaHeatpump] No change in Heatpump mode from %s to %s", start_str, end_str
             )
             return
         else:
-            logger.error(f"[ThermiaHeatpump] Unknown mode: {mode}")
+            logger.error("[ThermiaHeatpump] Unknown mode: %s", mode)
             raise ValueError(f"Unknown mode: {mode}")
 
     def cleanupHighPriceStrategies(self):
@@ -901,7 +923,7 @@ class ThermiaHeatpump(HeatpumpBaseclass):
         Remove all high price strategies that are no longer valid.
         """
         logger.debug(
-            f"[ThermiaHeatpump] Cleaning up high price strategies, currently {len(self.high_price_strategies)} strategies"
+            "[ThermiaHeatpump] Cleaning up high price strategies, currently %d strategies", len(self.high_price_strategies)
         )
         now = datetime.datetime.now(
             self.batcontrol_timezone
@@ -913,19 +935,19 @@ class ThermiaHeatpump(HeatpumpBaseclass):
         for start_time, strategy in self.high_price_strategies.items():
             if strategy.end_time.timestamp() < now.timestamp():
                 logger.debug(
-                    f"[ThermiaHeatpump] Removing high price strategy at {start_time} - {strategy.end_time}, because it ends before now: {now})"
+                    "[ThermiaHeatpump] Removing high price strategy at %s - %s, because it ends before now: %s", start_time, strategy.end_time, now
                 )
                 strategies_to_remove.append(start_time)
 
         for start_time in strategies_to_remove:
             del self.high_price_strategies[start_time]
             logger.debug(
-                f"[ThermiaHeatpump] Removed high price strategy for {start_time}"
+                "[ThermiaHeatpump] Removed high price strategy for %s", start_time
             )
             ## todo delete from mqtt
 
         logger.debug(
-            f"[ThermiaHeatpump] Cleanup complete. Remaining strategies: {len(self.high_price_strategies)}"
+            "[ThermiaHeatpump] Cleanup complete. Remaining strategies: %d", len(self.high_price_strategies)
         )
 
     def cleanupHighPriceHandlers(self):
@@ -942,31 +964,33 @@ class ThermiaHeatpump(HeatpumpBaseclass):
             end_time = handler.end_time
             if end_time.timestamp() < now.timestamp():
                 logger.debug(
-                    f"[ThermiaHeatpump] Removing high price handler for {start_time}-{end_time} , because it ends before now: {now})"
+                    "[ThermiaHeatpump] Removing high price handler for %s-%s , because it ends before now: %s", start_time, end_time, now
                 )
                 handlers_to_remove.append(start_time)
 
         for start_time in handlers_to_remove:
             del self.high_price_handlers[start_time]
             logger.debug(
-                f"[ThermiaHeatpump] Removed high price handler for {start_time}"
+                "[ThermiaHeatpump] Removed high price handler for %s", start_time
             )
             #### todo delete from mqtt
 
         logger.debug(
-            f"[ThermiaHeatpump] Cleanup complete. Remaining handlers: {len(self.high_price_handlers)}"
+            "[ThermiaHeatpump] Cleanup complete. Remaining handlers: %d", len(self.high_price_handlers)
         )
 
     def publish_strategies_to_mqtt(self):
         if self.mqtt_client:
             # Delete all existing high price handlers
             logger.debug(
-                f"[Heatpump] publishing strategy values ({len(self.high_price_handlers)} handlers, {len(self.high_price_strategies)} strategies) to MQTT"
+                "[ThermiaHeatpump] publishing strategy values (%d handlers, %d strategies) to MQTT", len(self.high_price_handlers), len(self.high_price_strategies)
             )
-            
+
             handlers_prefix = self._get_mqtt_topic() + "handlers/"
-            
-            logger.debug(f"[Heatpump] Cleaning up all previously published handlers at {handlers_prefix}")
+
+            logger.debug(
+                "[ThermiaHeatpump] Cleaning up all previously published handlers at %s", handlers_prefix
+            )
             self.mqtt_client.delete_all_topics(handlers_prefix)
 
             for start_time, handler in self.high_price_handlers.items():
@@ -988,7 +1012,9 @@ class ThermiaHeatpump(HeatpumpBaseclass):
 
             # Delete all existing high price strategies
             strategies_prefix = self._get_mqtt_topic() + "strategies/"
-            logger.debug(f"[Heatpump] Cleaning up all previously published strategies at {strategies_prefix}")
+            logger.debug(
+                "[ThermiaHeatpump] Cleaning up all previously published strategies at %s", strategies_prefix
+            )
             self.mqtt_client.delete_all_topics(strategies_prefix)
 
             for start_time, strategy in self.high_price_strategies.items():
@@ -1022,7 +1048,7 @@ class ThermiaHeatpump(HeatpumpBaseclass):
                     )
 
             logger.debug(
-                f"[Heatpump] strategy values ({len(self.high_price_handlers)} handlers, {len(self.high_price_strategies)} strategies) published to MQTT"
+                "[ThermiaHeatpump] strategy values (%d handlers, %d strategies) published to MQTT", len(self.high_price_handlers), len(self.high_price_strategies)
             )
 
     def shutdown(self):
@@ -1035,9 +1061,9 @@ class ThermiaHeatpump(HeatpumpBaseclass):
                 try:
                     self.heat_pump.delete_schedule(handler.schedule)
                     logger.info(
-                        f"[ThermiaHeatpump Destructor] Deleted schedule for high price handler starting at {start_time}"
+                        "[ThermiaHeatpump Destructor] Deleted schedule for high price handler starting at %s", start_time
                     )
                 except Exception as e:
                     logger.error(
-                        f"[ThermiaHeatpump Destructor] Failed to delete schedule for high price handler starting at {start_time}: {e}"
+                        "[ThermiaHeatpump Destructor] Failed to delete schedule for high price handler starting at %s: %s", start_time, e
                     )
