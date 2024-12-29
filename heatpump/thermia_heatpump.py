@@ -613,6 +613,33 @@ class ThermiaHeatpump(
                     handler.schedule,
                 )
             self.high_price_handlers = {}
+            # fetch the current state of the heat pump and
+            # calendars and check if they are still valid
+            #
+            # - if expired, delete them
+            # - also delete all schedules tat are in the time window we consider in this planning
+
+            current_schedules=self.heat_pump.get_schedules()
+            for schedule in current_schedules:
+                if schedule.start >= curr_hour_start and schedule.start <= max_timestamp:
+                    self.heat_pump.delete_schedule(schedule)
+                    logger.debug(
+                        "[ThermiaHeatpump] Replan from scratch: Deleted conflicting schedule %s",
+                        schedule,
+                    )
+                elif schedule.end < curr_hour_start:
+                    self.heat_pump.delete_schedule(schedule)
+                    logger.debug(
+                        "[ThermiaHeatpump] Replan from scratch: Deleted expired schedule %s",
+                        schedule,
+                    )
+                else:
+                    logger.debug(
+                        "[ThermiaHeatpump] Replan from scratch: Keeping schedule %s",
+                        schedule,
+                    )
+
+
             # TODO: summer mode would try to match heat pump energy demand and PV surplus
             # assumed_hourly_heatpump_energy_demand = 500  # watthour
             # assumed_hotwater_reheat_energy_demand = 1500  # watthour
