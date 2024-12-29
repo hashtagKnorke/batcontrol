@@ -1,4 +1,5 @@
 # pylint: disable=too-many-lines
+# pylint: disable=wrong-import-position
 """
 This module provides classes and methods for managing and controlling a Thermia heat pump system, 
 including handling high price periods and applying various strategies based on energy consumption 
@@ -23,8 +24,21 @@ import inspect
 import logging
 import datetime
 from typing import Optional
+import sys
+import os
 import pytz
 import numpy as np
+
+
+logger = logging.getLogger("__main__")
+logger.info("[Heatpump] loading module ")
+
+#### hack to add the submodule to the python path before import fails
+if os.path.isdir("thermia_online_api") and os.path.exists("thermia_online_api/ThermiaOnlineAPI"):
+    sys.path.append(os.path.abspath("thermia_online_api"))
+    logger.warning("ThermiaOnlineAPI module added to Python path from 'thermia_online_api' "
+                   +"subdirectory. This is a hack because of the forked library being "
+                   +"integrated as submodule in a subdir instead of root dir.")
 
 from ThermiaOnlineAPI.const import (
     CAL_FUNCTION_EVU_MODE,
@@ -38,6 +52,7 @@ from ThermiaOnlineAPI.utils import utils
 
 from mqtt_api import MqttApi
 from .baseclass import HeatpumpBaseclass, NoHeatPumpsFoundException
+
 
 
 @dataclass
@@ -146,8 +161,6 @@ class ThermiaStrategySlot:
             return f"STRATEGY({self.start_time}-{self.end_time}:[{self.mode}])"
 
 
-logger = logging.getLogger("__main__")
-logger.info("[Heatpump] loading module ")
 
 
 class ThermiaHeatpump(
