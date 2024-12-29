@@ -1024,7 +1024,7 @@ class ThermiaHeatpump(HeatpumpBaseclass):
                 f"[Heatpump] strategy values ({len(self.high_price_handlers)} handlers, {len(self.high_price_strategies)} strategies) published to MQTT"
             )
 
-    def __del__(self):
+    def shutdown(self):
         """
         Destructor to clean up high price handlers and delete corresponding schedules in the Thermia API.
         """

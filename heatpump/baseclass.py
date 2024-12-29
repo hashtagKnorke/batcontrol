@@ -84,3 +84,10 @@ class HeatpumpBaseclass(object):
         raise RuntimeError(
             "[Heatpump Base Class] Function 'set_heatpump_parameters' not implemented"
         )
+    def shutdown(self):
+        """
+        Shuts down the system.
+
+        This method is intended to perform any necessary cleanup and safely shut down the system.
+        """
+        pass

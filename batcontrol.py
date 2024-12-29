@@ -199,6 +199,7 @@ class Batcontrol(object):
             self.inverter.shutdown()
             # todo: shutdown other components
             del self.inverter
+            self.heatpump.shutdown()
             del self.heatpump
         except:
             pass
