@@ -570,7 +570,7 @@ class ThermiaHeatpump(
                 logger.error("[ThermiaHeatpump] Failed to refresh API values: %s", e)
 
     def _get_all_properties(self, obj):
-        for name in inspect.getmembers(
+        for name, method in inspect.getmembers( # pylint: disable=unused-variable
             obj.__class__, lambda m: isinstance(m, property)
         ):
             yield name, getattr(obj, name)
