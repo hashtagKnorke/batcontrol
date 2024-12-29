@@ -76,23 +76,6 @@ class HeatpumpBaseclass():
         """
         return "heatpumps/0/"
 
-    def ensure_strategy_for_time_window(self, start_time: datetime, end_time: datetime):
-        """
-        Plan for high price window.
-
-        This method should be implemented by subclasses to provide the specific
-        logic for planning for high price window.
-
-        Args:
-            start_time (datetime): The start time of the high price window.
-            end_time (datetime): The end time of the high price window.
-        Raises:
-            Error: If the method is not implemented by the subclass.
-        """
-        raise RuntimeError(
-            "[Heatpump Base Class] Function '_plan_for_high_price_window' not implemented"
-        )
-
     def set_heatpump_parameters(self, net_consumption: np.ndarray, prices: dict):
         """
         Set the parameters for the heat pump based on net energy consumption and energy prices.
