@@ -117,3 +117,11 @@ class HeatpumpBaseclass():
         This method is intended to perform any necessary cleanup and safely shut down the system.
         """
         pass  # default impl does nothing,  pylint: disable=unnecessary-pass
+class NoHeatPumpsFoundException(Exception):
+    """
+    Exception raised when no heat pumps are found in the configuration or the configured user account. 
+    """
+
+    def __init__(self, message="No heat pumps found in the configuration"):
+        self.message = message
+        super().__init__(self.message)
