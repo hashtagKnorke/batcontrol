@@ -2,7 +2,6 @@
 Parent Class for implementing Heatpumps and test drivers
 """
 
-from datetime import datetime
 import numpy as np
 from mqtt_api import MqttApi
 
@@ -102,7 +101,8 @@ class HeatpumpBaseclass():
         pass  # default impl does nothing,  pylint: disable=unnecessary-pass
 class NoHeatPumpsFoundException(Exception):
     """
-    Exception raised when no heat pumps are found in the configuration or the configured user account. 
+    Exception raised when no heat pumps are found 
+    in the configuration or the configured user account. 
     """
 
     def __init__(self, message="No heat pumps found in the configuration"):
