@@ -1156,7 +1156,7 @@ class ThermiaHeatpump(
                     + "-"
                     + handler.end_time.strftime("%H:%M")
                     + "-"
-                    + handler.mode,
+                    + handler.schedule.functionId
                 )
                 self.mqtt_client.generic_publish(
                     mqtt_handler_topic + "/start_time",
@@ -1165,9 +1165,6 @@ class ThermiaHeatpump(
                 self.mqtt_client.generic_publish(
                     mqtt_handler_topic + "/end_time",
                     handler.end_time.strftime("%Y-%m-%d %H:%M"),
-                )
-                self.mqtt_client.generic_publish(
-                    mqtt_handler_topic + "/mode", handler.mode
                 )
                 self.mqtt_client.generic_publish(
                     mqtt_handler_topic + "/calendar_function_id",
