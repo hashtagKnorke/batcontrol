@@ -7,7 +7,7 @@ import numpy as np
 from mqtt_api import MqttApi
 
 
-class HeatpumpBaseclass(object):
+class HeatpumpBaseclass():
     """ "
     HeatpumpBaseclass is a base class for heat pump systems, providing a structure for implementing
     MQTT functionality, refreshing API values, generating MQTT topics,

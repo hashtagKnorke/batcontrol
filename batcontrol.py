@@ -14,7 +14,7 @@ from forecastsolar import forecastsolar
 from dynamictariff import dynamictariff
 from inverter import inverter
 from logfilelimiter import logfilelimiter
-from heatpump import Heatpump
+from heatpump import heatpump
 
 ## Add the subdirectory to the Python path
 #sys.path.append(os.path.join(os.path.dirname(__file__), 'thermia_online_api'))
@@ -113,7 +113,7 @@ class Batcontrol(object):
             DELAY_EVALUATION_BY_SECONDS
         )
 
-        self.heatpump = Heatpump.Heatpump(config['heatpump'], timezone) 
+        self.heatpump = heatpump.Heatpump(config['heatpump'], timezone) 
 
 
         self.inverter = inverter.Inverter(config['inverter'])
