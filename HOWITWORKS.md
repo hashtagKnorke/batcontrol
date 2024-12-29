@@ -77,11 +77,12 @@ To get started with the extended Thermia Online API, refer to the documentation 
 
 The strategy involves setting the heat pump to the most energy-saving mode during high price periods while considering the following modes:
 
-- **EVU Block**: Activated when electricity prices are high.
-- **Hot Water Block**: Activated to block hot water production during high price periods.
-- **Reduced Heat**: Lowers the heating effect to save energy.
-- **Increased Heat**: Increases heating when energy is cheap or there is a PV surplus.
-- **Hot Water Boost**: Boosts hot water production when there is an energy surplus.
+- **E: EVU Block**: Activated when electricity prices are high. Maximum energy saving, deactivating heating and Hot water production.
+- **B: Hot Water Block**: Activated to block hot water production during high price periods.
+- **R: Reduced Heat**: Lowers the heating effect to save energy.
+- **N: Normal mode**: No adjustments to heatpump behaviour.
+- **H: Increased Heat**: Increases heating when energy is cheap or there is a PV surplus.
+- **W: Hot Water Boost**: Boosts hot water production when there is an energy surplus.
 
 #### Configuration Parameters
 
