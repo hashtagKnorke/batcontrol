@@ -1,14 +1,39 @@
-# This file contains the base class for the heatpump implementation.
-# The base class is used to define the interface for the heatpump implementation.
-from datetime import datetime
-import mqtt_api
-import numpy as np
+"""
+Parent Class for implementing Heatpumps and test drivers
+"""
 
-""" Parent Class for implementing Heatpumps and test drivers"""
+from datetime import datetime
+import numpy as np
+from mqtt_api import MqttApi
 
 
 class HeatpumpBaseclass(object):
-    def activate_mqtt(self, mqtt_api: mqtt_api.MqttApi):
+    """ "
+    HeatpumpBaseclass is a base class for heat pump systems, providing a structure for implementing
+    MQTT functionality, refreshing API values, generating MQTT topics,
+    planning for high price windows, setting heat pump parameters, and shutting down the system.
+
+    Methods:
+        activate_mqtt(mqtt_api: mqtt_api.MqttApi):
+            Activates the MQTT functionality for the heat pump. Must be implemented by subclasses.
+
+        refresh_api_values():
+            Refreshes the API values for the heat pump. Must be implemented by subclasses.
+
+        _get_mqtt_topic() -> str:
+
+        ensure_strategy_for_time_window(start_time: datetime, end_time: datetime):
+            Plans for high price window. Must be implemented by subclasses.
+
+        set_heatpump_parameters(net_consumption: np.ndarray, prices: dict):
+            Sets the parameters for the heat pump based on net energy consumption and energy prices.
+            Must be implemented by subclasses.
+
+        shutdown():
+            Shuts down the system, performing any necessary cleanup.
+    """
+
+    def activate_mqtt(self, mqtt_api: MqttApi):
         """
         Activates the MQTT functionality for the heat pump.
 
@@ -84,10 +109,11 @@ class HeatpumpBaseclass(object):
         raise RuntimeError(
             "[Heatpump Base Class] Function 'set_heatpump_parameters' not implemented"
         )
+
     def shutdown(self):
         """
         Shuts down the system.
 
         This method is intended to perform any necessary cleanup and safely shut down the system.
         """
-        pass
+        pass  # default impl does nothing,  pylint: disable=unnecessary-pass
