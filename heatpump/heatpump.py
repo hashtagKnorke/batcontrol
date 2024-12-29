@@ -14,7 +14,7 @@ Dependencies:
 """
 
 import pytz
-from .DummyHeatpump import DummyHeatpump
+from .dummy_heatpump import DummyHeatpump
 from .silent_heatpump import SilentHeatpump
 from .Thermia import ThermiaHeatpump
 
