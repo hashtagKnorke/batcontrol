@@ -372,8 +372,9 @@ class MqttApi:
             self.client.subscribe(topic_wildcard)
             logger.debug(f'[MQTT] Waiting for messages matching topic ({topic_wildcard}) to be processed')
 
-            # Wait for all messages to be processed  
-            time.sleep(20)
+            # Wait for all messages to be processed
+            # from current observation, 3 seconds seem enough  
+            time.sleep(3)
 
             self.client.unsubscribe(topic_wildcard)
             self.client.message_callback_remove(topic_wildcard)
