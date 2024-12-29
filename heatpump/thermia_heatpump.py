@@ -1156,7 +1156,7 @@ class ThermiaHeatpump(
                     + "-"
                     + handler.end_time.strftime("%H:%M")
                     + "-"
-                    + handler.schedule.functionId
+                    + str(handler.schedule.functionId)
                 )
                 self.mqtt_client.generic_publish(
                     mqtt_handler_topic + "/start_time",
