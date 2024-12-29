@@ -361,16 +361,16 @@ class MqttApi:
             prefix = prefix[:-1]
 
         f_q_prefix=self.base_topic + '/' + prefix
-        logger.debug(f'[MQTT] Deleting all topics with prefix {f_q_prefix}')
-        if self.client.is_connected() == True:
-            def on_message_delete(client, userdata, message):
-                logger.info(f'[MQTT] Deleting topic {message.topic}')
+        logger.debug('[MQTT] Deleting all topics with prefix %s', f_q_prefix)
+        if self.client.is_connected():
+            def on_message_delete(client, userdata, message): # pylint: disable=unused-argument # callback
+                logger.info('[MQTT] Deleting topic %s', message.topic)
                 self.client.publish(message.topic, None, retain=True)
-            
+
             topic_wildcard = f_q_prefix + '/#'
             self.client.message_callback_add(topic_wildcard, on_message_delete)
             self.client.subscribe(topic_wildcard)
-            logger.debug(f'[MQTT] Waiting for messages matching topic ({topic_wildcard}) to be processed')
+            logger.debug('[MQTT] Waiting for messages matching topic (%s)', topic_wildcard)
 
             # Wait for all messages to be processed
             # from current observation, 3 seconds seem enough  
@@ -378,7 +378,7 @@ class MqttApi:
 
             self.client.unsubscribe(topic_wildcard)
             self.client.message_callback_remove(topic_wildcard)
-            logger.debug(f'[MQTT] All topics with prefix {topic_wildcard} deleted')
+            logger.debug('[MQTT] All topics with prefix %s deleted', topic_wildcard)
         return
     
     

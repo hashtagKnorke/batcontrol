@@ -1,4 +1,4 @@
-#pylint: disable=too-many-lines
+# pylint: disable=too-many-lines
 """
 This module provides classes and methods for managing and controlling a Thermia heat pump system, 
 including handling high price periods and applying various strategies based on energy consumption 
@@ -100,7 +100,7 @@ class ThermiaStrategySlot:
         Sets the handler for high price handling.
     """
 
-    def __init__( #pylint: disable=too-many-arguments
+    def __init__(  # pylint: disable=too-many-arguments
         self,
         start_time: datetime.datetime,
         end_time: datetime.datetime,
@@ -150,14 +150,16 @@ logger = logging.getLogger("__main__")
 logger.info("[Heatpump] loading module ")
 
 
-class ThermiaHeatpump(HeatpumpBaseclass): #pylint: disable=too-many-instance-attributes
+class ThermiaHeatpump(
+    HeatpumpBaseclass
+):  # pylint: disable=too-many-instance-attributes
     """
     ThermiaHeatpump class for managing and controlling a Thermia heat pump.
 
     This class provides methods to initialize the heat pump, fetch configuration parameters,
     ensure connection to the heat pump, activate MQTT, refresh API values, set heat pump parameters,
-    adjust mode duration, apply modes, ensure strategies for time windows, 
-    install schedules in the heat pump, clean up high price strategies and handlers, 
+    adjust mode duration, apply modes, ensure strategies for time windows,
+    install schedules in the heat pump, clean up high price strategies and handlers,
     and publish strategies to MQTT.
 
     Attributes:
@@ -219,7 +221,7 @@ class ThermiaHeatpump(HeatpumpBaseclass): #pylint: disable=too-many-instance-att
     refresh_api_values()
         Refresh API values and publish them to MQTT.
     set_heatpump_parameters(net_consumption: np.ndarray, prices: dict)
-    adjust_mode_duration(heat_modes: list[str], prices: list[float], 
+    adjust_mode_duration(heat_modes: list[str], prices: list[float],
         inspected_mode: str, downgrade_mode: str, max_mode_duration: int)
     applyMode(mode: str, start_index: int, end_index: int)
         Apply the specified mode for the given time range.
@@ -375,7 +377,7 @@ class ThermiaHeatpump(HeatpumpBaseclass): #pylint: disable=too-many-instance-att
             float: The value of the parameter from the configuration, or the default value.
         """
 
-        if name in config: #pylint: disable=no-else-return
+        if name in config:  # pylint: disable=no-else-return
             logger.debug(
                 "[ThermiaHeatpump] fetching %s from config: %s", name, config[name]
             )
@@ -423,7 +425,7 @@ class ThermiaHeatpump(HeatpumpBaseclass): #pylint: disable=too-many-instance-att
             except ConnectionError as e:
                 logger.error("[ThermiaHeatpump] Connection error: %s", e)
                 self.heat_pump = None
-            except Exception as e: #pylint: disable=broad-except
+            except Exception as e:  # pylint: disable=broad-except
                 logger.error("[ThermiaHeatpump] Unexpected error: %s", e)
                 self.heat_pump = None
 
@@ -551,7 +553,7 @@ class ThermiaHeatpump(HeatpumpBaseclass): #pylint: disable=too-many-instance-att
 
                 logger.debug("[ThermiaHeatpump] config values published to MQTT  ...")
 
-            except Exception as e: #pylint: disable=broad-except
+            except Exception as e:  # pylint: disable=broad-except
                 logger.error("[ThermiaHeatpump] Failed to refresh API values: %s", e)
 
     def _get_all_properties(self, obj):
@@ -574,8 +576,8 @@ class ThermiaHeatpump(HeatpumpBaseclass): #pylint: disable=too-many-instance-att
         None
         Notes:
         ------
-        This method determines the operating mode of the heat pump for each hour 
-        based on the net energy consumption and energy prices. 
+        This method determines the operating mode of the heat pump for each hour
+        based on the net energy consumption and energy prices.
         The modes are:
             - "W": Hot water boost
             - "H": Heat increased temperature
@@ -583,7 +585,7 @@ class ThermiaHeatpump(HeatpumpBaseclass): #pylint: disable=too-many-instance-att
             - "R": Heat reduced temperature
             - "B": Hot water block
             - "E": EVU Block
-        The method logs the decision-making process and applies the determined 
+        The method logs the decision-making process and applies the determined
         modes over continuous time windows.
         """
         # ensure availability of data
@@ -666,7 +668,7 @@ class ThermiaHeatpump(HeatpumpBaseclass): #pylint: disable=too-many-instance-att
                         else:
                             logger.debug(
                                 "[ThermiaHeatpump] Set Increased Heat at +%dh due to high surplus "
-                                +"%s and low outdoor temperature %s",
+                                + "%s and low outdoor temperature %s",
                                 h,
                                 net_consumption[h],
                                 self.heat_pump.outdoor_temperature,
@@ -675,7 +677,7 @@ class ThermiaHeatpump(HeatpumpBaseclass): #pylint: disable=too-many-instance-att
                         heat_modes[h] = "N"
                         logger.debug(
                             "[ThermiaHeatpump] Set Normal Heat at +%dh due to high surplus "
-                            +"%s and high outdoor temperature %s",
+                            + "%s and high outdoor temperature %s",
                             h,
                             net_consumption[h],
                             self.heat_pump.outdoor_temperature,
@@ -791,7 +793,7 @@ class ThermiaHeatpump(HeatpumpBaseclass): #pylint: disable=too-many-instance-att
         max_mode_duration: int,
     ):
         """
-        Adjust the duration of a specific heat mode and downgrade 
+        Adjust the duration of a specific heat mode and downgrade
         it if it exceeds the maximum allowed duration.
 
         Parameters:
@@ -1032,15 +1034,15 @@ class ThermiaHeatpump(HeatpumpBaseclass): #pylint: disable=too-many-instance-att
         """
         Remove all high price strategies that are no longer valid.
 
-        This method iterates through the high price strategies stored in the 
-        `self.high_price_strategies` dictionary and removes any strategies 
-        whose end time is before the current time. The current time is 
+        This method iterates through the high price strategies stored in the
+        `self.high_price_strategies` dictionary and removes any strategies
+        whose end time is before the current time. The current time is
         adjusted to the heat pump's installation timezone.
         The method logs the following information:
         - The number of high price strategies before cleanup.
         - Each strategy that is removed, including its start and end times.
         - The number of remaining high price strategies after cleanup.
-        
+
         """
         logger.debug(
             "[ThermiaHeatpump] Cleaning up high price strategies, currently %d strategies",
@@ -1057,7 +1059,7 @@ class ThermiaHeatpump(HeatpumpBaseclass): #pylint: disable=too-many-instance-att
             if strategy.end_time.timestamp() < now.timestamp():
                 logger.debug(
                     "[ThermiaHeatpump] Removing high price strategy at %s - %s, "
-                    +"because it ends before now: %s",
+                    + "because it ends before now: %s",
                     start_time,
                     strategy.end_time,
                     now,
@@ -1089,7 +1091,7 @@ class ThermiaHeatpump(HeatpumpBaseclass): #pylint: disable=too-many-instance-att
             if end_time.timestamp() < now.timestamp():
                 logger.debug(
                     "[ThermiaHeatpump] Removing high price handler for %s-%s , "
-                    +"because it ends before now: %s",
+                    + "because it ends before now: %s",
                     start_time,
                     end_time,
                     now,
@@ -1144,13 +1146,17 @@ class ThermiaHeatpump(HeatpumpBaseclass): #pylint: disable=too-many-instance-att
             )
             self.mqtt_client.delete_all_topics(handlers_prefix)
 
-            for start_time, handler in self.high_price_handlers.items():
-                mqtt_handler_topic = handlers_prefix + start_time.strftime(
-                    "%Y-%m-%d_%H:%M"
-                )
+            for index, (start_time, handler) in enumerate(
+                self.high_price_handlers.items()
+            ):
+                mqtt_handler_topic = handlers_prefix + str(index)
                 self.mqtt_client.generic_publish(
                     mqtt_handler_topic,
-                    handler.schedule.functionId,
+                    start_time.strftime("%Y-%m-%d_%H:%M")
+                    + "-"
+                    + handler.end_time.strftime("%H:%M")
+                    + "-"
+                    + handler.mode,
                 )
                 self.mqtt_client.generic_publish(
                     mqtt_handler_topic + "/start_time",
@@ -1159,6 +1165,13 @@ class ThermiaHeatpump(HeatpumpBaseclass): #pylint: disable=too-many-instance-att
                 self.mqtt_client.generic_publish(
                     mqtt_handler_topic + "/end_time",
                     handler.end_time.strftime("%Y-%m-%d %H:%M"),
+                )
+                self.mqtt_client.generic_publish(
+                    mqtt_handler_topic + "/mode", handler.mode
+                )
+                self.mqtt_client.generic_publish(
+                    mqtt_handler_topic + "/calendar_function_id",
+                    handler.schedule.functionId,
                 )
 
             # Delete all existing high price strategies
@@ -1169,12 +1182,13 @@ class ThermiaHeatpump(HeatpumpBaseclass): #pylint: disable=too-many-instance-att
             )
             self.mqtt_client.delete_all_topics(strategies_prefix)
 
-            for start_time, strategy in self.high_price_strategies.items():
-                high_price_strategy_topic = strategies_prefix + start_time.strftime(
-                    "%Y-%m-%d_%H:%M"
-                )
+            for index, (start_time, strategy) in enumerate(
+                self.high_price_strategies.items()
+            ):
+                high_price_strategy_topic = strategies_prefix + str(index)
                 self.mqtt_client.generic_publish(
-                    high_price_strategy_topic, strategy.mode
+                    high_price_strategy_topic,
+                    start_time.strftime("%Y-%m-%d %H:%M") + ":" + strategy.mode,
                 )
                 self.mqtt_client.generic_publish(
                     high_price_strategy_topic + "/price", strategy.price
@@ -1207,7 +1221,7 @@ class ThermiaHeatpump(HeatpumpBaseclass): #pylint: disable=too-many-instance-att
 
     def shutdown(self):
         """
-        Destructor to clean up high price handlers 
+        Destructor to clean up high price handlers
         and delete corresponding schedules in the Thermia API.
         """
         logger.debug("[ThermiaHeatpump Destructor] Cleaning up high price handlers")
@@ -1219,7 +1233,7 @@ class ThermiaHeatpump(HeatpumpBaseclass): #pylint: disable=too-many-instance-att
                         "[ThermiaHeatpump] Deleted schedule for high price handler starting at %s",
                         start_time,
                     )
-                except Exception as e: #pylint: disable=broad-except
+                except Exception as e:  # pylint: disable=broad-except
                     logger.error(
                         "[ThermiaHeatpump] Failed to delete schedule for handler at %s: %s",
                         start_time,
