@@ -1,0 +1,11 @@
+consumers:
+  - name: MyConsumer
+    plugin: LoggingDummy
+    config:
+      prefix: inst1
+      param2: value2
+  - name: AnotherConsumer
+    plugin: LoggingDummy
+    config:
+      prefix: 2AnotherConsumer
+      param2: value4

@@ -1,0 +1,22 @@
+
+implementation_class: logging_dummy.LoggingDummy
+required_config:
+  - prefix
+  - param2
+required_alpine_packages:
+  - python3
+
+required_python_modules:
+  - pyyaml
+  - logging
+  - os
+  - sys
+  - time
+  - random
+  - string
+  - json
+  - datetime
+  - socket
+  - requests
+  - urllib3
+  - logging
