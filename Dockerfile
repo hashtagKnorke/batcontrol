@@ -24,7 +24,8 @@ RUN apk add --no-cache \
             py3-yaml\
             py3-requests\
             py3-paho-mqtt \
-            tzdata
+            tzdata \
+            yq
 
 
 COPY *.py ./
@@ -38,6 +39,7 @@ COPY forecastconsumption ./forecastconsumption
 COPY forecastsolar ./forecastsolar
 COPY logfilelimiter ./logfilelimiter
 COPY entrypoint.sh ./
+COPY install_required_alpine_modules_for_plugins.sh ./
 RUN chmod +x entrypoint.sh
 
 VOLUME [ "/app/logs" , "/app/config" ]
