@@ -43,7 +43,8 @@ class Consumer:
                                      plugin} in consumer config for: {consumer_name}")
 
         # call constructor of plugin with the config
-        consumer = consumer_class(consumer_config)
+        consumer = consumer_class()
+        consumer.post_init(consumer_config)
         consumer.consumer_num = Consumer.num_consumers
         Consumer.num_consumers += 1
         return consumer

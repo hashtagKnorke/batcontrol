@@ -29,7 +29,7 @@ def main():
 
     # Example usage of the consumers
     for consumer in consumers:
-        logger.info(f"[DEMO] Created consumer[{consumer}] with number: {consumer.consumer_num} ")
+        logger.info(f"[DEMO] Created consumer[{consumer}] with number: {consumer.consumer_num}  and name {consumer.get_name()}")
         consumer.shutdown()
 
 if __name__ == "__main__":

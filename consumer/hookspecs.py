@@ -5,9 +5,28 @@ from mqtt_api import MqttApi
 hookspec = pluggy.HookspecMarker("consumer")
 
 class ConsumerInterface:
+    def __init__(self):
+        """
+        Constructor for the consumer. 
+        Cannot be standardized as hookspec, thus post_init is introduced as hookspec.
+        """
+    
     @hookspec
-    def consumer_get_class(name: str):
-        """Return the consumer class for the given name."""
+    def post_init(self, dict_config: dict):
+        """
+        This method is called after the consumer has been initialized.
+
+        This method should be implemented by subclasses to perform any necessary
+        post-initialization steps, such as setting up additional configurations
+        or initializing resources.
+
+        Args:
+            dict_config (dict): A dictionary containing the configuration for the consumer.
+        """
+
+    @hookspec
+    def get_name(self) -> str:
+        """Return the consumer name."""
 
     @hookspec
     def activate_mqtt(self, mqtt_api: MqttApi):
