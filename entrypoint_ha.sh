@@ -40,5 +40,7 @@ fi
 # Create a symlink to /app/log/batcontrol.log
 ln -sf $LOG_FILE /app/logs/batcontrol.log
 
+exec /app/install_required_alpine_modules_for_plugins.sh app/cofig/consumer_plugins
+
 # Start batcontrol.py
 exec python batcontrol.py

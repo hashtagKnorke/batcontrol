@@ -40,5 +40,7 @@ fi
 echo "Current local time is: $(date)"
 echo "Configured timezone (env var TZ) is: $TZ"
 
+exec /app/install_required_alpine_modules_for_plugins.sh app/config/consumer_plugins
+
 # Start batcontrol.py
 exec python /app/batcontrol.py
