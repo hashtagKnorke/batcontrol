@@ -19,7 +19,7 @@ class Consumer:
     _manifest_dict: dict[str, dict] = {}
 
     @staticmethod
-    def create_consumer(config: dict) -> ConsumerInterface:
+    def __create_consumer(config: dict) -> ConsumerInterface:
         """ Select and configure a consumer based on the given configuration """
 
         consumer_name = config.get("name")
@@ -78,7 +78,7 @@ class Consumer:
         with open(config_path, "r") as config_file:
             config = yaml.safe_load(config_file)
             for consumer_config in config.get("consumers", []):
-                consumer = Consumer.create_consumer(consumer_config)
+                consumer = Consumer.__create_consumer(consumer_config)
                 Consumer._consumers.append(consumer)
 
     @staticmethod
