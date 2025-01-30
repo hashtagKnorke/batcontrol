@@ -1,11 +1,15 @@
-
+# This file is the manifest for the LoggingDummy consumer plugin.
+# It defines the configuration and metadata required for the plugin to function within the batcontrol system.
 implementation_class: logging_dummy.LoggingDummy
 required_config:
   - prefix
-  - param2
+
 required_alpine_packages:
   - python3
+  - py3-numpy
+  - py3-requests
 
+## currently unused
 required_python_modules:
   - pyyaml
   - logging
