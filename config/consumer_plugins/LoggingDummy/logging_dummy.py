@@ -2,16 +2,26 @@ import pluggy
 import numpy as np
 from consumer.hookspecs import ConsumerInterface
 from mqtt_api import MqttApi
+import logging
 
 hookimpl = pluggy.HookimplMarker("consumer")
 
+logger = logging.getLogger('__main__')
+logger.info('[LoggingDummy] loading module ')
+
+
 class LoggingDummy(ConsumerInterface):
     def __init__(self, dict_config: dict):
-        self._prefix=dict_config.get("prefix", "default")
+        # read prefix from configuration - defined as required in the manifest
+        self._prefix = dict_config.get("prefix", "default")
+        # read enable_stdout from configuration - NOT defined as required in the manifest
+        self.enable_stdout=dict_config.get("enable_stdout", False)
         self.log(f"Initializing consumer with config: {dict_config}")
 
-    def log(self, message:str):
-        print(f"[{self._prefix}] {message}")
+    def log(self, message: str):
+        if self.enable_stdout:
+            print(f"[{self._prefix}] {message}")
+        logger.info(f"[{self._prefix}] {message}")
 
     def activate_mqtt(self, mqtt_api: MqttApi):
         self.log(f"Activating MQTT")
@@ -36,13 +46,3 @@ class LoggingDummy(ConsumerInterface):
     def shutdown(self):
         self.log(f"Shutting down consumer[{self}]")
         pass
-
-@hookimpl
-def consumer_get_class(name):
-    if name == "MyConsumer":
-        return LoggingDummy
-    return None
-
-# Register the hook implementation
-def register_plugin(pm):
-    pm.register(consumer_get_class)
